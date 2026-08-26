@@ -1,0 +1,91 @@
+version: '3.8'
+services:
+  ezbori-sql:
+    image: mcr.microsoft.com/mssql/server:2022-CU17-ubuntu-22.04
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_PID=Express
+    ports:
+      - 1401:1433
+    expose:
+      - 1433
+    networks:
+      - ezborinet
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ezbori-rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - ezborinet
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  ezbori-api:
+    restart: unless-stopped
+    build:
+      context: .
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=ezbori-sql,1433;Database=IB210298;User=sa;Password=${SA_PASSWORD};ConnectRetryCount=0;TrustServerCertificate=True
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpirationInMinutes=${JWT_EXPIRY_MINUTES}
+      - Smtp__Host=${SMTP_HOST}
+      - Smtp__Port=${SMTP_PORT}
+      - Smtp__UserName=${SMTP_USER}
+      - Smtp__Password=${SMTP_PASS}
+      - RabbitMQ__Host=ezbori-rabbitmq
+      - RabbitMQ__User=${RABBITMQ_USER}
+      - RabbitMQ__Pass=${RABBITMQ_PASS}
+    ports:
+      - 5000:5000
+    networks:
+      - ezborinet
+    depends_on:
+      ezbori-sql:
+        condition: service_healthy
+      ezbori-rabbitmq:
+        condition: service_healthy
+
+  ezbori-worker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.sender
+    environment:
+      - Smtp__Host=${SMTP_HOST}
+      - Smtp__Port=${SMTP_PORT}
+      - Smtp__UserName=${SMTP_USER}
+      - Smtp__Password=${SMTP_PASS}
+      - Smtp__FromAddress=${SMTP_USER}
+      - Smtp__FromName=eZbori
+      - RabbitMQ__Host=ezbori-rabbitmq
+      - RabbitMQ__User=${RABBITMQ_USER}
+      - RabbitMQ__Pass=${RABBITMQ_PASS}
+    networks:
+      - ezborinet
+    depends_on:
+      ezbori-rabbitmq:
+        condition: service_healthy
+
+networks:
+  ezborinet:
+    driver: bridge

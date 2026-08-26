@@ -1,0 +1,25 @@
+﻿CREATE TABLE [elections].[EntityMunicipalOverview]
+(
+	[Id] INT IDENTITY(1, 1) PRIMARY KEY NOT NULL,
+    [ElectionYear] INT NOT NULL,
+    [MunicipalityCode] INT NOT NULL,
+    [ElectoralUnitId] INT NOT NULL,
+    [InvalidBlankBallots] INT NOT NULL,
+    [InvalidOthersBallots] INT NOT NULL,
+    [NumberOfCandidates] INT NOT NULL,
+    [NumberOfVoters] INT NOT NULL,
+    [NumberOfParties] INT NOT NULL,
+    [PercentageProcessedPollingStations] DECIMAL(18, 2) NOT NULL,
+    [PercentageTotalNoVotes] DECIMAL(18, 2) NOT NULL,
+    [PercentageTotalVotes] DECIMAL(18, 2) NOT NULL,
+    [ProcessedInvalidBlankBallots] DECIMAL(18, 2) NOT NULL,
+    [ProcessedInvalidOthersBallots] DECIMAL(18, 2) NOT NULL,
+    [ProcessedPollingStations] DECIMAL(18, 2) NOT NULL,
+    [ProcessedTotalInvalidVotes] DECIMAL(18, 2) NOT NULL,
+    [ProcessedValidVotes] DECIMAL(18, 2) NOT NULL,
+    [TotalInvalidVotes] INT NOT NULL,
+    [TotalNoVotes] INT NOT NULL,
+    [TotalPollingStations] INT NOT NULL,
+    [TotalVotes] INT NOT NULL,
+    [ValidVotes] INT NOT NULL
+)

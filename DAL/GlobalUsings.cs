@@ -1,0 +1,10 @@
+﻿global using Application.Enum;
+global using Application.Models;
+global using Application.Models.MachineLearning;
+global using Application.ReadModels;
+global using Application.Repositories;
+global using DAL.Data.Connection;
+global using DAL.Helpers;
+global using Microsoft.EntityFrameworkCore;
+global using DAL.Data;
+global using DAL.Exceptions;
