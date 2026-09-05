@@ -14,6 +14,12 @@ public class SavedSearchRepository(eZboriDbContext dbContext) : ISavedSearchRepo
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync();
 
+    public async Task<IEnumerable<SavedSearch>> GetByUserIncludingDeletedAsync(int userId)
+        => await _context.SavedSearches
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync();
+
     public async Task<SavedSearch> CreateAsync(SavedSearch search)
     {
         search.CreatedAt = DateTime.UtcNow;

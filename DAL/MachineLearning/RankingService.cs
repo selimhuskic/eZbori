@@ -52,7 +52,7 @@ public class RankingService(
 
         if (userId.HasValue)
         {
-            var saved = await savedSearchRepository.GetByUserAsync(userId.Value);
+            var saved = await savedSearchRepository.GetByUserIncludingDeletedAsync(userId.Value);
             foreach (var s in saved)
             {
                 var year = (int)s.ElectionYear;
@@ -70,7 +70,7 @@ public class RankingService(
             .GroupBy(x => (Subject: SubjectKey(x.Type), x.ElectionYear))
             .Select(g =>
             {
-                var item = g.First();
+                var item = g.OrderByDescending(x => x.Relevance).First();
                 var subject = SubjectKey(item.Type);
                 var year = item.ElectionYear;
 

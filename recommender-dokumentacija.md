@@ -10,38 +10,23 @@ Sistem preporuka kombinuje dva algoritma: **popularnostni rangiranjem** (engl. p
 
 ### Signali relevantnosti
 
-Za svaku kombinaciju (tip podataka, godina izbora) sistem izračunava ocjenu relevantnosti (0–4) koristeći dvije dimenzije:
+Za svaku kombinaciju (tip podataka, godina izbora) sistem izračunava ocjenu relevantnosti koristeći `SearchSuggestionRelevanceGenerator.GetRelevance(godina, sveGodine, tip)`:
 
-**1. Recency (svježi podataka) — osnova**
+- Ocjena je **fiksni rang važnosti tipa podatka (1–4)**, definiran u četiri statičke liste tipova (`relevanceTypes4/3/2/1`): rezultati najvišeg nivoa (predsjednički rezultati, entitetski/državni izborni rezultati po stranci) nose 4; pregledi istog nivoa nose 3; općinski/municipalni rezultati nose 2; općinski/municipalni pregledi i preostali tipovi nose 1.
+- Ova ocjena se dodjeljuje **isključivo najnovijoj godini** u tom skupu podataka (`sveGodine.LastOrDefault() == godina`) — svaka starija godina dobija ocjenu **0** i time se efektivno isključuje iz rangiranja.
+- Ne postoji multi-nivo recency skala niti multiplikator po nivou izbora — ocjena je direktno ovaj fiksni rang, bez množenja.
 
-| Pozicija godine u sortiranom nizu | Ocjena |
-|---|---|
-| Najnovija godina (posljednja u nizu) | +2 |
-| Pretposljednja godina | +1 |
-| Starije godine | +0 |
-
-Izračun se vrši unutar `SearchSuggestionRelevanceGenerator.GetRelevance()` koji prima sortiran rastući niz svih dostupnih godina.
-
-**2. Election level (nivo izbora) — multiplikator**
-
-| Nivo | Primjeri | Multiplikator |
-|---|---|---|
-| Državni parlament / Predsjednički | Državni parlament BiH, Predsjedništvo | ×2 |
-| Entitetski parlament | Entitetski parlamenti (FBiH, RS) | ×1.5 |
-| Kantonalni parlament | Kantonalna skupštine | ×1 |
-| Općinski nivo | Općinski vijećnici, kandidati | ×0.75 |
-
-Mapiranje tipova na nivo definirano je u `RankingService._typeToSubject` (vrijednosti: 1=Državni, 5=Predsjednički, 9=Entitetski, 15=Kantonalni, 20/22=Općinski).
+Mapiranje tipova na "subject" (nivo prikaza korisniku) definirano je odvojeno u `RankingService._typeToSubject` (vrijednosti: 1=Državni, 5=Predsjednički, 9=Entitetski, 15=Kantonalni, 20/22=Općinski) i koristi se samo za grupiranje/deduplikaciju i personalizacijske boostove, ne za samu ocjenu relevantnosti.
 
 ### Dedupliciranje
 
-Svaki par (nivo izbora, godina) pojavljuje se maksimalno jednom u finalnoj listi — vrši se grupiranje i uzima se zapis s najvišom ocjenom iz grupe.
+Svaki par (subject, godina) pojavljuje se maksimalno jednom u finalnoj listi — vrši se grupiranje (`RankingService.GetSuggestedSearchesRankedAsync`) i uzima se zapis s **najvišom ocjenom relevantnosti** iz grupe (`g.OrderByDescending(x => x.Relevance).First()`), prije primjene personalizacijskog boosta.
 
 ---
 
 ## Personalizacija (drugi nivo)
 
-Ako je korisnik prijavljen, sistem učitava njegovu historiju spašenih pretraga (`ISavedSearchRepository.GetByUserAsync`) i primjenjuje boost:
+Ako je korisnik prijavljen, sistem učitava njegovu historiju spašenih pretraga (`ISavedSearchRepository.GetByUserIncludingDeletedAsync`) i primjenjuje boost. **Brisanje spašene pretrage je soft-delete upravo zato da ta historija i dalje ostane signal recommenderu** — obrisane pretrage se stoga namjerno uključuju u ovaj upit (za razliku od `GetByUserAsync`, koji izostavlja obrisane i koristi se isključivo za prikaz liste spašenih pretraga korisniku).
 
 | Podudaranje | Boost |
 |---|---|
@@ -70,7 +55,7 @@ Svaka preporuka sadrži polje `Reason` koje se prikazuje korisniku u mobilnoj ap
 
 ## Implementacijske napomene
 
-- Pet repozitorija se pozivaju **paralelno** putem `Task.WhenAll` (poboljšanje performansi)
+- Pet repozitorija se pozivaju **sekvencijalno** (jedan `await` za drugim), namjerno — paralelno pozivanje putem `Task.WhenAll` je ranije uzrokovalo `InvalidOperationException` (HTTP 500), jer EF Core `DbContext` nije thread-safe za paralelne upite nad istom instancom. Ne vraćati na paralelno izvršavanje bez uvođenja odvojenog `DbContext`-a po pozivu.
 - Anonimni korisnici dobivaju isključivo popularnostne preporuke (bez personalizacije)
 - Spašene pretrage s `AnalysisSubject = null` ne sudjeluju u subject-boostanju, ali sudjeluju u year-boostanju
 - Broj preporuka je konfigurabiln putem query parametra `top` (default: 10)
