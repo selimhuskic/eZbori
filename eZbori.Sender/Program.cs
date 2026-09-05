@@ -10,6 +10,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<InviteEmailWorker>();
 builder.Services.AddHostedService<PasswordResetEmailWorker>();
 builder.Services.AddHostedService<ImportWorker>();
+builder.Services.AddHostedService<InformationalEmailWorker>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Missing DefaultConnection configuration");

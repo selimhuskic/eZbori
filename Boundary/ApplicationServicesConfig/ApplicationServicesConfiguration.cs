@@ -28,6 +28,7 @@ public static class ApplicationServicesConfiguration
         services.AddScoped<IUserInviteQueue, RabbitMqUserInviteQueue>();
         services.AddScoped<IPasswordResetQueue, RabbitMqPasswordResetQueue>();
         services.AddScoped<IImportQueue, RabbitMqImportQueue>();
+        services.AddScoped<IInformationalEmailQueue, RabbitMqInformationalEmailQueue>();
         services.AddMemoryCache();
     }
 }

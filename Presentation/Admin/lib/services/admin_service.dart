@@ -205,6 +205,19 @@ class AdminService {
     }
   }
 
+  Future<bool> sendNotification(List<int> userIds, String subject, String body) async {
+    try {
+      final response = await ApiClient.dio.post('/User/notify', data: {
+        'userIds': userIds,
+        'subject': subject,
+        'body': body,
+      });
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> forceChangePassword(String newPassword) async {
     try {
       final response = await ApiClient.dio.post('/User/force-change-password', data: {

@@ -56,3 +56,5 @@ public record ResetPasswordRequest(string Email, string Token, string NewPasswor
 public record ForceChangePasswordRequest(string NewPassword);
 
 public record AdminUserDto(int Id, string Email, string UserName, string FirstName, string LastName, bool UserVerified, int UserRole);
+
+public record SendNotificationRequest(List<int> UserIds, string Subject, string Body);

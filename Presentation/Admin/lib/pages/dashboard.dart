@@ -7,6 +7,7 @@ import 'bootstrap.dart';
 import 'election_cycles.dart';
 import 'users.dart';
 import 'municipalities.dart';
+import 'send_notification.dart';
 
 class Dashboard extends StatefulWidget {
   static const String routeName = "/dashboard";
@@ -127,6 +128,14 @@ class _DashboardState extends State<Dashboard> {
                 Navigator.pushNamed(context, Municipalities.routeName);
               },
             ),
+            _DrawerTile(
+              icon: Icons.mail_outline,
+              label: 'Pošalji obavijest',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, SendNotification.routeName);
+              },
+            ),
           ],
         ),
       ),
@@ -174,6 +183,14 @@ class _DashboardState extends State<Dashboard> {
                   color: Colors.deepPurple,
                   onTap: () =>
                       Navigator.pushNamed(context, Municipalities.routeName),
+                ),
+                _DashboardCard(
+                  icon: Icons.mail_outline,
+                  label: 'Obavijest',
+                  subtitle: 'Pošalji email korisnicima',
+                  color: Colors.teal,
+                  onTap: () =>
+                      Navigator.pushNamed(context, SendNotification.routeName),
                 ),
               ],
             ),

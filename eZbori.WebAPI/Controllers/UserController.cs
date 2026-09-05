@@ -148,6 +148,14 @@ public class UserController(
     }
 
     [Authorize(Roles = "Administrator")]
+    [HttpPost("notify")]
+    public async Task<IActionResult> SendNotification([FromBody] SendNotificationRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SendInformationalEmailCommand(request.UserIds, request.Subject, request.Body), cancellationToken);
+        return Ok(new { message = "Poruka je poslana." });
+    }
+
+    [Authorize(Roles = "Administrator")]
     [HttpPost("invite")]
     public async Task<IActionResult> InviteUser([FromBody] InviteUserRequest request, CancellationToken cancellationToken)
     {
