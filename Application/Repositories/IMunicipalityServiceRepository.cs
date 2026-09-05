@@ -1,4 +1,5 @@
 ﻿using Application.Enum;
+using Application.Models;
 using Application.ReadModels;
 
 namespace Application.Repositories
@@ -13,6 +14,8 @@ namespace Application.Repositories
         int[] GetDistinctCantonCodes();
         int GetCantonCode(int municipalityCode);
         Task<IEnumerable<MunicipalityReadModel>> GetAllMunicipalities();
+        Task<Municipality> CreateAsync(Municipality municipality);
         Task UpdateAsync(int id, string name, int population);
+        Task DeleteAsync(int id);
     }
 }

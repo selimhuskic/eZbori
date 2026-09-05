@@ -82,16 +82,18 @@ class _ElectionCyclesState extends State<ElectionCycles> {
     if (ok) _load();
   }
 
-  Future<void> _showAddDialog() async {
-    final yearController = TextEditingController();
-    final urlController = TextEditingController(text: 'https://www.izbori.ba/api_2018');
-    final resultKeyController = TextEditingController();
-    int selectedType = 1;
+  Future<void> _showCycleDialog({ElectionCycle? existing}) async {
+    final isEdit = existing != null;
+    final yearController = TextEditingController(text: isEdit ? '${existing.year}' : '');
+    final urlController = TextEditingController(
+        text: isEdit ? existing.apiBaseUrl : 'https://www.izbori.ba/api_2018');
+    final resultKeyController = TextEditingController(text: isEdit ? existing.resultKey : '');
+    int selectedType = isEdit ? existing.electionType : 1;
 
     final result = await showDialog<ElectionCycle>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Dodaj izborni ciklus'),
+        title: Text(isEdit ? 'Uredi izborni ciklus' : 'Dodaj izborni ciklus'),
         content: StatefulBuilder(
           builder: (_, setS) => SingleChildScrollView(
             child: Column(
@@ -144,28 +146,38 @@ class _ElectionCyclesState extends State<ElectionCycles> {
               Navigator.pop(
                 ctx,
                 ElectionCycle(
-                    id: 0,
+                    id: isEdit ? existing.id : 0,
                     year: year,
                     electionType: selectedType,
                     apiBaseUrl: url,
                     resultKey: resultKey),
               );
             },
-            child: const Text('Dodaj'),
+            child: Text(isEdit ? 'Spremi' : 'Dodaj'),
           ),
         ],
       ),
     );
 
     if (result == null || !mounted) return;
-    final created = await _service.createElectionCycle(result);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          created != null ? 'Ciklus dodan.' : 'Greška pri dodavanju.'),
-      backgroundColor: created != null ? Colors.green : Colors.red,
-    ));
-    if (created != null) _load();
+    if (isEdit) {
+      final error = await _service.updateElectionCycle(result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error ?? 'Ciklus ažuriran.'),
+        backgroundColor: error == null ? Colors.green : Colors.red,
+      ));
+      if (error == null) _load();
+    } else {
+      final created = await _service.createElectionCycle(result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            created != null ? 'Ciklus dodan.' : 'Greška pri dodavanju.'),
+        backgroundColor: created != null ? Colors.green : Colors.red,
+      ));
+      if (created != null) _load();
+    }
   }
 
   @override
@@ -198,7 +210,7 @@ class _ElectionCyclesState extends State<ElectionCycles> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
+        onPressed: () => _showCycleDialog(),
         backgroundColor: const Color.fromARGB(255, 45, 88, 166),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -238,9 +250,21 @@ class _ElectionCyclesState extends State<ElectionCycles> {
                             subtitle: Text(c.resultKey,
                                 style: const TextStyle(fontSize: 12),
                                 overflow: TextOverflow.ellipsis),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () => _delete(c.id),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined,
+                                      color: Color.fromARGB(255, 45, 88, 166)),
+                                  tooltip: 'Uredi',
+                                  onPressed: () => _showCycleDialog(existing: c),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  tooltip: 'Obriši',
+                                  onPressed: () => _delete(c.id),
+                                ),
+                              ],
                             ),
                           );
                         },

@@ -7,6 +7,12 @@ import '../models/admin_user.dart';
 import '../models/election_cycle.dart';
 
 class AdminService {
+  static String _extractError(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['error'] is String) return data['error'] as String;
+    return data?.toString() ?? e.message ?? e.type.name;
+  }
+
   // Bootstrap endpoints
   static const _bootstrapTimeout = Duration(minutes: 5);
 
@@ -108,6 +114,16 @@ class AdminService {
     }
   }
 
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> updateElectionCycle(ElectionCycle cycle) async {
+    try {
+      final response = await ApiClient.dio.put('/ElectionCycle/${cycle.id}', data: cycle.toJson());
+      return response.statusCode == 204 ? null : 'HTTP ${response.statusCode}';
+    } on DioException catch (e) {
+      return _extractError(e);
+    }
+  }
+
   // Users
   Future<List<AdminUser>> getAllUsers() async {
     try {
@@ -176,6 +192,42 @@ class AdminService {
       return response.statusCode == 204;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> createMunicipality({
+    required int id,
+    required String name,
+    required int entity,
+    required int population,
+    required int stateParliamentElectoralUnit,
+    required int entityParliamentElectoralUnit,
+    int? cantonParliamentElectoralUnit,
+  }) async {
+    try {
+      final response = await ApiClient.dio.post('/MunicipalityManagement', data: {
+        'id': id,
+        'name': name,
+        'entity': entity,
+        'population': population,
+        'stateParliamentElectoralUnit': stateParliamentElectoralUnit,
+        'entityParliamentElectoralUnit': entityParliamentElectoralUnit,
+        'cantonParliamentElectoralUnit': cantonParliamentElectoralUnit,
+      });
+      return response.statusCode == 201 ? null : 'HTTP ${response.statusCode}';
+    } on DioException catch (e) {
+      return _extractError(e);
+    }
+  }
+
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> deleteMunicipality(int code) async {
+    try {
+      final response = await ApiClient.dio.delete('/MunicipalityManagement/$code');
+      return response.statusCode == 204 ? null : 'HTTP ${response.statusCode}';
+    } on DioException catch (e) {
+      return _extractError(e);
     }
   }
 

@@ -10,6 +10,23 @@ class Municipalities extends StatefulWidget {
   State<Municipalities> createState() => _MunicipalitiesState();
 }
 
+const _stateParliamentUnits = {
+  511: 'F1', 512: 'F2', 513: 'F3', 514: 'F4', 515: 'F5',
+  521: 'RS1', 522: 'RS2', 523: 'RS3',
+};
+
+const _entityParliamentUnits = {
+  401: 'F1', 402: 'F2', 403: 'F3', 404: 'F4', 405: 'F5', 406: 'F6',
+  407: 'F7', 408: 'F8', 409: 'F9', 410: 'F10', 411: 'F11', 412: 'F12',
+  301: 'RS1', 302: 'RS2', 303: 'RS3', 304: 'RS4', 305: 'RS5',
+  306: 'RS6', 307: 'RS7', 308: 'RS8', 309: 'RS9',
+};
+
+const _cantonParliamentUnits = {
+  201: 'USK', 202: 'PK', 203: 'TK', 204: 'ZDK', 205: 'BPK',
+  206: 'SBK', 207: 'HNK', 208: 'ZHK', 209: 'KS', 210: 'K10',
+};
+
 class _MunicipalitiesState extends State<Municipalities> {
   final _service = AdminService();
   late Future<List<AdminMunicipality>> _future;
@@ -72,6 +89,141 @@ class _MunicipalitiesState extends State<Municipalities> {
     if (ok) _refresh();
   }
 
+  Future<void> _showAddDialog() async {
+    final codeCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    final popCtrl = TextEditingController();
+    int entity = 1;
+    int stateUnit = _stateParliamentUnits.keys.first;
+    int entityUnit = _entityParliamentUnits.keys.first;
+    int? cantonUnit;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dodaj općinu'),
+        content: StatefulBuilder(
+          builder: (_, setS) => SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: codeCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Šifra općine'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Naziv'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: popCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Stanovništvo'),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: entity,
+                  decoration: const InputDecoration(labelText: 'Entitet'),
+                  items: const [
+                    DropdownMenuItem(value: 1, child: Text('FBiH')),
+                    DropdownMenuItem(value: 2, child: Text('RS')),
+                  ],
+                  onChanged: (v) => setS(() => entity = v!),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: stateUnit,
+                  decoration: const InputDecoration(labelText: 'Državna izborna jedinica'),
+                  items: _stateParliamentUnits.entries
+                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setS(() => stateUnit = v!),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: entityUnit,
+                  decoration: const InputDecoration(labelText: 'Entitetska izborna jedinica'),
+                  items: _entityParliamentUnits.entries
+                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setS(() => entityUnit = v!),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int?>(
+                  value: cantonUnit,
+                  decoration: const InputDecoration(labelText: 'Kantonalna izborna jedinica'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Nema')),
+                    ..._cantonParliamentUnits.entries
+                        .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))),
+                  ],
+                  onChanged: (v) => setS(() => cantonUnit = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Odustani')),
+          ElevatedButton(
+            onPressed: () {
+              final code = int.tryParse(codeCtrl.text.trim());
+              if (code == null || nameCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Dodaj'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final error = await _service.createMunicipality(
+      id: int.parse(codeCtrl.text.trim()),
+      name: nameCtrl.text.trim(),
+      entity: entity,
+      population: int.tryParse(popCtrl.text.trim()) ?? 0,
+      stateParliamentElectoralUnit: stateUnit,
+      entityParliamentElectoralUnit: entityUnit,
+      cantonParliamentElectoralUnit: cantonUnit,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(error ?? 'Općina dodana.'),
+      backgroundColor: error == null ? Colors.green : Colors.red,
+    ));
+    if (error == null) _refresh();
+  }
+
+  Future<void> _delete(AdminMunicipality m) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Brisanje'),
+        content: Text('Jeste li sigurni da želite obrisati općinu ${m.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Odustani')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Obriši'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final error = await _service.deleteMunicipality(m.code);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(error ?? 'Općina obrisana.'),
+      backgroundColor: error == null ? Colors.green : Colors.red,
+    ));
+    if (error == null) _refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,6 +234,12 @@ class _MunicipalitiesState extends State<Municipalities> {
         actions: [
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Osvježi', onPressed: _refresh),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: const Color.fromARGB(255, 45, 88, 166),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
@@ -131,11 +289,21 @@ class _MunicipalitiesState extends State<Municipalities> {
                       ),
                       title: Text(m.name),
                       subtitle: Text('Šifra: ${m.code}  ·  Stanovništvo: ${m.population}'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit_outlined,
-                            color: Color.fromARGB(255, 45, 88, 166)),
-                        tooltip: 'Uredi',
-                        onPressed: () => _edit(m),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined,
+                                color: Color.fromARGB(255, 45, 88, 166)),
+                            tooltip: 'Uredi',
+                            onPressed: () => _edit(m),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            tooltip: 'Obriši',
+                            onPressed: () => _delete(m),
+                          ),
+                        ],
                       ),
                     );
                   },

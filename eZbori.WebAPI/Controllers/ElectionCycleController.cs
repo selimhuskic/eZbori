@@ -24,6 +24,13 @@ public class ElectionCycleController(IMediator mediator) : BaseEZboriController(
         return CreatedAtAction(nameof(GetAll), created);
     }
 
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] ElectionCycle cycle, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UpdateElectionCycleCommand(id, cycle), cancellationToken);
+        return NoContent();
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {

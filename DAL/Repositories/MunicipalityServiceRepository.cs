@@ -1,4 +1,6 @@
-﻿namespace DAL.Repositories;
+﻿using Microsoft.Data.SqlClient;
+
+namespace DAL.Repositories;
 
 public class MunicipalityServiceRepository(eZboriDbContext dboContext) : IMunicipalityServiceRepository
 {
@@ -73,12 +75,40 @@ public class MunicipalityServiceRepository(eZboriDbContext dboContext) : IMunici
         return await readModels.ToArrayAsync();
     }
 
+    public async Task<Municipality> CreateAsync(Municipality municipality)
+    {
+        var exists = await _dbContext.Municipalities.AnyAsync(x => x.Id == municipality.Id);
+        if (exists)
+            throw new UserException($"Općina sa šifrom {municipality.Id} već postoji.");
+
+        await _dbContext.Municipalities.AddAsync(municipality);
+        await _dbContext.SaveChangesAsync();
+        
+        return municipality;
+    }
+
     public async Task UpdateAsync(int id, string name, int population)
     {
-        var municipality = await _dbContext.Municipalities.FindAsync(id);
-        if (municipality is null) return;
+        var municipality = await _dbContext.Municipalities.FindAsync(id)
+            ?? throw new UserException($"Općina sa šifrom {id} ne postoji.");
         municipality.Name = name;
         municipality.Population = population;
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        var municipality = await _dbContext.Municipalities.FindAsync(id)
+            ?? throw new UserException($"Općina sa šifrom {id} ne postoji.");
+
+        _dbContext.Municipalities.Remove(municipality);
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 547 })
+        {
+            throw new UserException("Općina se ne može obrisati jer je povezana s postojećim izbornim podacima.");
+        }
     }
 }

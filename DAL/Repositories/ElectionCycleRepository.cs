@@ -22,6 +22,17 @@ public class ElectionCycleRepository(eZboriDbContext dbContext)
         return cycle;
     }
 
+    public async Task UpdateAsync(int id, ElectionCycle cycle)
+    {
+        var existing = await _context.ElectionCycles.FindAsync(id)
+            ?? throw new UserException($"Election cycle with id {id} not found.");
+        existing.Year = cycle.Year;
+        existing.ElectionType = cycle.ElectionType;
+        existing.ApiBaseUrl = cycle.ApiBaseUrl;
+        existing.ResultKey = cycle.ResultKey;
+        await _context.SaveChangesAsync();
+    }
+
     public async Task DeleteAsync(int id)
     {
         var cycle = await _context.ElectionCycles.FindAsync(id)
