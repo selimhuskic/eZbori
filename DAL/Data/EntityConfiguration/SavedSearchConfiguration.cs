@@ -17,5 +17,10 @@ public class SavedSearchConfiguration : IEntityTypeConfiguration<SavedSearch>
         builder.Property(x => x.MunicipalityCode).HasColumnType("int");
         builder.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
         builder.Property(x => x.IsDeleted).HasColumnType("bit").IsRequired();
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
