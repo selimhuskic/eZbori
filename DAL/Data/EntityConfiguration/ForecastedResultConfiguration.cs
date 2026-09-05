@@ -14,5 +14,9 @@ public class ForecastedResultConfiguration : IEntityTypeConfiguration<Forecasted
         builder.Property(x => x.ForecastedNumberOfVotes).HasColumnType("float");
         builder.Property(x => x.PartyName).HasColumnType("nvarchar(512)").IsRequired();
         builder.Property(x => x.ElectionYear).HasColumnType("smallint");
+
+        builder.HasOne<Municipality>()
+            .WithMany()
+            .HasForeignKey(x => x.MunicipalCode);
     }
 }

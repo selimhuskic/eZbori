@@ -29,6 +29,7 @@ namespace DAL.Data.EntityConfiguration
             builder.Property(x => x.PartyNumber).HasColumnType("int").IsRequired();
             builder.Property(x => x.CandidatesNumber).HasColumnType("int").IsRequired();
             builder.Property(x => x.MunicipalityCode).HasColumnType("int").IsRequired();
+            builder.HasOne<Municipality>().WithMany().HasForeignKey(x => x.MunicipalityCode);
         }
     }
 }

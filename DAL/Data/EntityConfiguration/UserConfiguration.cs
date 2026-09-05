@@ -15,6 +15,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.UserRole).HasColumnType("int").IsRequired();
         builder.Property(x => x.UserVerified).HasColumnType("bit").IsRequired();
         builder.Ignore(x => x.Role);
+        builder.HasOne<Application.Models.UserRole>().WithMany().HasForeignKey(x => x.UserRole);
         builder.HasIndex(x => x.Email).IsUnique();
         builder.HasIndex(x => x.UserName).IsUnique();
         builder.Property(x => x.MunicipalityId).IsRequired(false);

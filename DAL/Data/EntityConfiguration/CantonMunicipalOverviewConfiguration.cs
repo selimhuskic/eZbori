@@ -12,6 +12,7 @@ namespace DAL.Data.EntityConfiguration
             builder.Property(x => x.ElectionYear).HasColumnType("int").IsRequired();
             builder.Property(x => x.CantonCode).HasColumnType("int").IsRequired();
             builder.Property(x => x.MunicipalityCode).HasColumnType("int").IsRequired();
+            builder.HasOne<Municipality>().WithMany().HasForeignKey(x => x.MunicipalityCode);
         }
     }
 }

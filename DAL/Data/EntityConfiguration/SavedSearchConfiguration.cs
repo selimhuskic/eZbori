@@ -22,5 +22,9 @@ public class SavedSearchConfiguration : IEntityTypeConfiguration<SavedSearch>
             .WithMany()
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<Municipality>()
+            .WithMany()
+            .HasForeignKey(x => x.MunicipalityCode);
     }
 }

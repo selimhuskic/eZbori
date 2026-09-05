@@ -31,6 +31,7 @@ namespace DAL.Data.EntityConfiguration
             builder.Property(x => x.ProcessedRegularVotes).HasColumnType("decimal").IsRequired();
             builder.Property(x => x.ProcessedValidVotes).HasColumnType("decimal").IsRequired();
             builder.Property(x => x.TotalPollingStations).HasColumnType("int").IsRequired();
+            builder.HasOne<Municipality>().WithMany().HasForeignKey(x => x.MunicipalityCode);
         }
     }
 }

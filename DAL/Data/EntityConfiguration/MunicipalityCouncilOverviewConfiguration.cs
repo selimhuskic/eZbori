@@ -35,6 +35,7 @@ namespace DAL.Data.EntityConfiguration
             builder.Property(x => x.PercentageProcessedPollingStations).HasColumnType("decimal").IsRequired();
             builder.Property(x => x.PercentageTotalNoVotes).HasColumnType("decimal").IsRequired();
             builder.Property(x => x.PercentageTotalVotes).HasColumnType("decimal").IsRequired();
+            builder.HasOne<Municipality>().WithMany().HasForeignKey(x => x.MunicipalityCode);
         }
     }
 }

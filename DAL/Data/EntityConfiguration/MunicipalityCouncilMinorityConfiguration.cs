@@ -20,6 +20,7 @@ namespace DAL.Data.EntityConfiguration
             builder.Property(x => x.PostOfficeVotes).HasColumnType("int").IsRequired();
             builder.Property(x => x.TotalVotes).HasColumnType("int").IsRequired();
             builder.Property(x => x.RegularVotes).HasColumnType("int").IsRequired();
+            builder.HasOne<Municipality>().WithMany().HasForeignKey(x => x.MunicipalityCode);
         }
     }
 }
