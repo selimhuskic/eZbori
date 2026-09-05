@@ -43,8 +43,8 @@ class _BootstrapBodyState extends State<_BootstrapBody> {
   @override
   void initState() {
     super.initState();
-    _service.getElectionCycles().then((cycles) {
-      if (mounted) setState(() => _allCycles = cycles);
+    _service.getElectionCycles().then((result) {
+      if (mounted) setState(() => _allCycles = result.$1);
     });
   }
 

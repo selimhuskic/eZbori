@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import '../models/admin_user.dart';
 import '../services/admin_service.dart';
 import 'invite_user.dart';
@@ -15,6 +16,7 @@ class Users extends StatefulWidget {
 class _UsersState extends State<Users> {
   final _service = AdminService();
   List<AdminUser> _users = [];
+  String? _error;
   bool _loading = true;
   final _searchController = TextEditingController();
   String _query = '';
@@ -33,10 +35,11 @@ class _UsersState extends State<Users> {
   }
 
   Future<void> _loadUsers() async {
-    final users = await _service.getAllUsers();
+    final (users, error) = await _service.getAllUsers();
     if (!mounted) return;
     setState(() {
       _users = users;
+      _error = error;
       _loading = false;
     });
   }
@@ -57,6 +60,19 @@ class _UsersState extends State<Users> {
       return;
     }
     await AdminService.openPdfBytes(bytes, 'korisnici.pdf');
+  }
+
+  Future<void> _printPdf() async {
+    final bytes = await _service.downloadUsersReport();
+    if (!mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Greška pri preuzimanju izvještaja.'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+    await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'korisnici.pdf');
   }
 
   String _roleName(int roleId) => roleId == 2 ? 'Administrator' : 'Korisnik';
@@ -159,6 +175,11 @@ class _UsersState extends State<Users> {
             onPressed: _downloadPdf,
           ),
           IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'Odštampaj',
+            onPressed: _printPdf,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Osvježi',
             onPressed: _refresh,
@@ -192,9 +213,11 @@ class _UsersState extends State<Users> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : _users.isEmpty
-                    ? const Center(child: Text('Nema korisnika ili greška pri učitavanju.'))
-                    : Builder(builder: (context) {
+                : _error != null
+                    ? Center(child: Text('Greška pri učitavanju: $_error'))
+                    : _users.isEmpty
+                        ? const Center(child: Text('Nema korisnika.'))
+                        : Builder(builder: (context) {
           final users = _query.isEmpty
               ? _users
               : _users

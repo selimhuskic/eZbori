@@ -225,21 +225,22 @@ class _RegistrationState extends State<Registration> {
                         return;
                       }
 
-                      var responseText = 'Registration failed';
+                      if (!context.mounted) return;
 
                       if (registerResponse.success) {
-                        responseText = 'Success. Login for confirmation.';
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Uspješna registracija. Prijavite se.',
+                              textAlign: TextAlign.center),
+                          duration: Duration(seconds: 3),
+                        ));
                         Navigator.pushNamed(context, Login.routeName);
-                      }
-
-                      if (registerResponse.response == 'Conflict') {
-                        responseText =
-                            'User with this email and/or username exists!';
+                        return;
                       }
 
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content:
-                            Text(responseText, textAlign: TextAlign.center),
+                        content: Text(
+                            registerResponse.message ?? 'Registracija nije uspjela.',
+                            textAlign: TextAlign.center),
                         duration: const Duration(seconds: 3),
                       ));
                     },

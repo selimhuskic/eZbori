@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import '../models/election_cycle.dart';
 import '../services/admin_service.dart';
 
@@ -14,6 +15,7 @@ class ElectionCycles extends StatefulWidget {
 class _ElectionCyclesState extends State<ElectionCycles> {
   final _service = AdminService();
   List<ElectionCycle> _cycles = [];
+  String? _error;
   bool _loading = true;
   final _searchController = TextEditingController();
   String _query = '';
@@ -33,10 +35,11 @@ class _ElectionCyclesState extends State<ElectionCycles> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final cycles = await _service.getElectionCycles();
+    final (cycles, error) = await _service.getElectionCycles();
     if (!mounted) return;
     setState(() {
       _cycles = cycles;
+      _error = error;
       _loading = false;
     });
   }
@@ -52,6 +55,19 @@ class _ElectionCyclesState extends State<ElectionCycles> {
       return;
     }
     await AdminService.openPdfBytes(bytes, 'izborni-ciklusi.pdf');
+  }
+
+  Future<void> _printPdf() async {
+    final bytes = await _service.downloadElectionCyclesReport();
+    if (!mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Greška pri preuzimanju izvještaja.'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+    await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'izborni-ciklusi.pdf');
   }
 
   Future<void> _delete(int id) async {
@@ -84,6 +100,7 @@ class _ElectionCyclesState extends State<ElectionCycles> {
 
   Future<void> _showCycleDialog({ElectionCycle? existing}) async {
     final isEdit = existing != null;
+    final formKey = GlobalKey<FormState>();
     final yearController = TextEditingController(text: isEdit ? '${existing.year}' : '');
     final urlController = TextEditingController(
         text: isEdit ? existing.apiBaseUrl : 'https://www.izbori.ba/api_2018');
@@ -96,40 +113,56 @@ class _ElectionCyclesState extends State<ElectionCycles> {
         title: Text(isEdit ? 'Uredi izborni ciklus' : 'Dodaj izborni ciklus'),
         content: StatefulBuilder(
           builder: (_, setS) => SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: yearController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Godina'),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  value: selectedType,
-                  decoration: const InputDecoration(labelText: 'Tip izbora'),
-                  items: const [
-                    DropdownMenuItem(value: 1, child: Text('Opšti izbori')),
-                    DropdownMenuItem(value: 2, child: Text('Lokalni izbori')),
-                  ],
-                  onChanged: (v) => setS(() => selectedType = v!),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: urlController,
-                  decoration:
-                      const InputDecoration(labelText: 'API bazni URL'),
-                  keyboardType: TextInputType.url,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: resultKeyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Result Key',
-                    hintText: 'WebResult_YYYYTYPE_...',
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: yearController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Godina'),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+                      if (int.tryParse(v.trim()) == null) return 'Unesite ispravnu godinu';
+                      return null;
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    value: selectedType,
+                    decoration: const InputDecoration(labelText: 'Tip izbora'),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('Opšti izbori')),
+                      DropdownMenuItem(value: 2, child: Text('Lokalni izbori')),
+                    ],
+                    onChanged: (v) => setS(() => selectedType = v!),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: urlController,
+                    decoration:
+                        const InputDecoration(labelText: 'API bazni URL'),
+                    keyboardType: TextInputType.url,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+                      final uri = Uri.tryParse(v.trim());
+                      if (uri == null || !uri.isAbsolute) return 'Unesite ispravan URL';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: resultKeyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Result Key',
+                      hintText: 'WebResult_YYYYTYPE_...',
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Obavezno polje' : null,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -139,10 +172,10 @@ class _ElectionCyclesState extends State<ElectionCycles> {
               child: const Text('Odustani')),
           ElevatedButton(
             onPressed: () {
-              final year = int.tryParse(yearController.text.trim());
+              if (!formKey.currentState!.validate()) return;
+              final year = int.parse(yearController.text.trim());
               final url = urlController.text.trim();
               final resultKey = resultKeyController.text.trim();
-              if (year == null || url.isEmpty || resultKey.isEmpty) return;
               Navigator.pop(
                 ctx,
                 ElectionCycle(
@@ -203,6 +236,11 @@ class _ElectionCyclesState extends State<ElectionCycles> {
             onPressed: _downloadPdf,
           ),
           IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'Odštampaj',
+            onPressed: _printPdf,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Osvježi',
             onPressed: _load,
@@ -232,9 +270,11 @@ class _ElectionCyclesState extends State<ElectionCycles> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : filtered.isEmpty
-                    ? const Center(child: Text('Nema definisanih ciklusa.'))
-                    : ListView.separated(
+                : _error != null
+                    ? Center(child: Text('Greška pri učitavanju: $_error'))
+                    : filtered.isEmpty
+                        ? const Center(child: Text('Nema definisanih ciklusa.'))
+                        : ListView.separated(
                         itemCount: filtered.length,
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, index) {

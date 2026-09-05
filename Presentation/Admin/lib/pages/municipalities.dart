@@ -29,7 +29,7 @@ const _cantonParliamentUnits = {
 
 class _MunicipalitiesState extends State<Municipalities> {
   final _service = AdminService();
-  late Future<List<AdminMunicipality>> _future;
+  late Future<(List<AdminMunicipality> items, String? error)> _future;
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -49,6 +49,7 @@ class _MunicipalitiesState extends State<Municipalities> {
   void _refresh() => setState(() => _future = _service.getMunicipalities());
 
   Future<void> _edit(AdminMunicipality m) async {
+    final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: m.name);
     final popCtrl = TextEditingController(text: '${m.population}');
 
@@ -56,30 +57,46 @@ class _MunicipalitiesState extends State<Municipalities> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Uredi: ${m.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Naziv'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: popCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Stanovništvo'),
-            ),
-          ],
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Naziv'),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Obavezno polje' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: popCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Stanovništvo'),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+                  if (int.tryParse(v.trim()) == null) return 'Unesite ispravan broj';
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Odustani')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Spremi')),
+          ElevatedButton(
+            onPressed: () {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Spremi'),
+          ),
         ],
       ),
     );
 
     if (confirmed != true || !mounted) return;
-    final pop = int.tryParse(popCtrl.text.trim()) ?? m.population;
+    final pop = int.parse(popCtrl.text.trim());
     final ok = await _service.updateMunicipality(m.code, nameCtrl.text.trim(), pop);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -90,6 +107,7 @@ class _MunicipalitiesState extends State<Municipalities> {
   }
 
   Future<void> _showAddDialog() async {
+    final formKey = GlobalKey<FormState>();
     final codeCtrl = TextEditingController();
     final nameCtrl = TextEditingController();
     final popCtrl = TextEditingController();
@@ -104,24 +122,38 @@ class _MunicipalitiesState extends State<Municipalities> {
         title: const Text('Dodaj općinu'),
         content: StatefulBuilder(
           builder: (_, setS) => SingleChildScrollView(
-            child: Column(
+            child: Form(
+              key: formKey,
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                TextFormField(
                   controller: codeCtrl,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Šifra općine'),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+                    if (int.tryParse(v.trim()) == null) return 'Unesite ispravan broj';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 8),
-                TextField(
+                TextFormField(
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Naziv'),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'Obavezno polje' : null,
                 ),
                 const SizedBox(height: 8),
-                TextField(
+                TextFormField(
                   controller: popCtrl,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Stanovništvo'),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+                    if (int.tryParse(v.trim()) == null) return 'Unesite ispravan broj';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
@@ -163,6 +195,7 @@ class _MunicipalitiesState extends State<Municipalities> {
                   onChanged: (v) => setS(() => cantonUnit = v),
                 ),
               ],
+              ),
             ),
           ),
         ),
@@ -170,8 +203,7 @@ class _MunicipalitiesState extends State<Municipalities> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Odustani')),
           ElevatedButton(
             onPressed: () {
-              final code = int.tryParse(codeCtrl.text.trim());
-              if (code == null || nameCtrl.text.trim().isEmpty) return;
+              if (!formKey.currentState!.validate()) return;
               Navigator.pop(ctx, true);
             },
             child: const Text('Dodaj'),
@@ -185,7 +217,7 @@ class _MunicipalitiesState extends State<Municipalities> {
       id: int.parse(codeCtrl.text.trim()),
       name: nameCtrl.text.trim(),
       entity: entity,
-      population: int.tryParse(popCtrl.text.trim()) ?? 0,
+      population: int.parse(popCtrl.text.trim()),
       stateParliamentElectoralUnit: stateUnit,
       entityParliamentElectoralUnit: entityUnit,
       cantonParliamentElectoralUnit: cantonUnit,
@@ -256,18 +288,23 @@ class _MunicipalitiesState extends State<Municipalities> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<AdminMunicipality>>(
+            child: FutureBuilder<(List<AdminMunicipality> items, String? error)>(
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                final error = snapshot.data?.$2;
+                if (error != null) {
+                  return Center(child: Text('Greška pri učitavanju: $error'));
+                }
+                final items = snapshot.data?.$1 ?? const [];
+                if (items.isEmpty) {
                   return const Center(child: Text('Nema podataka o općinama.'));
                 }
                 final filtered = _query.isEmpty
-                    ? snapshot.data!
-                    : snapshot.data!
+                    ? items
+                    : items
                         .where((m) => m.name.toLowerCase().contains(_query))
                         .toList();
 

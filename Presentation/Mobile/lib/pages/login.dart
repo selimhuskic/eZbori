@@ -6,6 +6,7 @@ import 'package:ezbori_mobile/pages/reset_password_by_token.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/user_Service.dart';
+import '../utils/api_error.dart';
 import 'admin/admin_dashboard.dart';
 
 class Login extends StatefulWidget {
@@ -46,8 +47,10 @@ class _LoginState extends State<Login> {
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      if (e.response != null) {
+      if (e.response?.statusCode == 401) {
         _showSnackBar('Pogrešno korisničko ime, e-mail ili lozinka.');
+      } else if (e.response != null) {
+        _showSnackBar(extractErrorMessage(e));
       } else {
         _showSnackBar('Nije moguće uspostaviti vezu s poslužiteljem.');
       }

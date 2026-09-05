@@ -41,7 +41,7 @@ class _SendNotificationState extends State<SendNotification> {
   }
 
   Future<void> _loadUsers() async {
-    final users = await _service.getAllUsers();
+    final (users, _) = await _service.getAllUsers();
     if (!mounted) return;
     setState(() {
       _users = users;

@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/base_Response.dart';
 import '../models/requests/register_request.dart';
 import '../models/user_profile.dart';
+import '../utils/api_error.dart';
 import 'api_client.dart';
 
 class LoginResult {
@@ -44,15 +46,19 @@ class UserService extends ApiClient {
   }
 
   Future<BaseResponse> register(RegisterRequest request) async {
-    final response = await ApiClient.dio.post(
-      '/User/Register',
-      data: request.toJson(),
-    );
+    try {
+      final response = await ApiClient.dio.post(
+        '/User/Register',
+        data: request.toJson(),
+      );
 
-    return BaseResponse(
-      'Register successful',
-      response.statusCode == 200,
-    );
+      return BaseResponse(
+        'Register successful',
+        response.statusCode == 200,
+      );
+    } on DioException catch (e) {
+      return BaseResponse(null, false, message: extractErrorMessage(e));
+    }
   }
 
   Future<UserProfile?> getProfile() async {

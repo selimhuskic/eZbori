@@ -82,16 +82,20 @@ class AdminService {
   }
 
   // Election cycles
-  Future<List<ElectionCycle>> getElectionCycles() async {
+  /// Returns the list of cycles paired with null on success, or an error message on failure.
+  Future<(List<ElectionCycle> items, String? error)> getElectionCycles() async {
     try {
       final response = await ApiClient.dio.get('/ElectionCycle');
       if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List)
+        final items = (response.data as List)
             .map((e) => ElectionCycle.fromJson(e as Map<String, dynamic>))
             .toList();
+        return (items, null);
       }
-    } catch (_) {}
-    return [];
+      return (<ElectionCycle>[], 'HTTP ${response.statusCode}');
+    } on DioException catch (e) {
+      return (<ElectionCycle>[], _extractError(e));
+    }
   }
 
   Future<ElectionCycle?> createElectionCycle(ElectionCycle cycle) async {
@@ -125,7 +129,9 @@ class AdminService {
   }
 
   // Users
-  Future<List<AdminUser>> getAllUsers() async {
+  /// Returns the users fetched so far paired with null on success, or an error
+  /// message on failure (any users fetched before the failing page are still returned).
+  Future<(List<AdminUser> items, String? error)> getAllUsers() async {
     const pageSize = 50;
     final users = <AdminUser>[];
     try {
@@ -133,7 +139,9 @@ class AdminService {
       while (true) {
         final response = await ApiClient.dio
             .get('/User/all', queryParameters: {'page': page, 'pageSize': pageSize});
-        if (response.statusCode != 200) break;
+        if (response.statusCode != 200) {
+          return (users, 'HTTP ${response.statusCode}');
+        }
 
         final data = response.data;
         List<dynamic> items;
@@ -152,8 +160,10 @@ class AdminService {
         if (items.isEmpty || users.length >= total) break;
         page++;
       }
-    } catch (_) {}
-    return users;
+    } on DioException catch (e) {
+      return (users, _extractError(e));
+    }
+    return (users, null);
   }
 
   Future<Uint8List?> downloadUsersReport() async {
@@ -183,16 +193,20 @@ class AdminService {
   }
 
   // Municipalities
-  Future<List<AdminMunicipality>> getMunicipalities() async {
+  /// Returns the list of municipalities paired with null on success, or an error message on failure.
+  Future<(List<AdminMunicipality> items, String? error)> getMunicipalities() async {
     try {
       final response = await ApiClient.dio.get('/MunicipalityManagement');
       if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List)
+        final items = (response.data as List)
             .map((e) => AdminMunicipality.fromJson(e as Map<String, dynamic>))
             .toList();
+        return (items, null);
       }
-    } catch (_) {}
-    return [];
+      return (<AdminMunicipality>[], 'HTTP ${response.statusCode}');
+    } on DioException catch (e) {
+      return (<AdminMunicipality>[], _extractError(e));
+    }
   }
 
   Future<bool> updateMunicipality(int code, String name, int population) async {
