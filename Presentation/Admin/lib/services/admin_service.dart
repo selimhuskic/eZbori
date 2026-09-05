@@ -126,22 +126,34 @@ class AdminService {
 
   // Users
   Future<List<AdminUser>> getAllUsers() async {
+    const pageSize = 50;
+    final users = <AdminUser>[];
     try {
-      final response = await ApiClient.dio.get('/User/all', queryParameters: {'pageSize': 500});
-      if (response.statusCode == 200) {
+      var page = 1;
+      while (true) {
+        final response = await ApiClient.dio
+            .get('/User/all', queryParameters: {'page': page, 'pageSize': pageSize});
+        if (response.statusCode != 200) break;
+
         final data = response.data;
         List<dynamic> items;
+        int total;
         if (data is Map<String, dynamic> && data.containsKey('items')) {
           items = data['items'] as List<dynamic>;
+          total = data['total'] as int? ?? items.length;
         } else if (data is List) {
           items = data;
+          total = items.length;
         } else {
-          return [];
+          break;
         }
-        return items.map((e) => AdminUser.fromJson(e as Map<String, dynamic>)).toList();
+
+        users.addAll(items.map((e) => AdminUser.fromJson(e as Map<String, dynamic>)));
+        if (items.isEmpty || users.length >= total) break;
+        page++;
       }
     } catch (_) {}
-    return [];
+    return users;
   }
 
   Future<Uint8List?> downloadUsersReport() async {

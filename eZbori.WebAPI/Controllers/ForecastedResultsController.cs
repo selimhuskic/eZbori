@@ -9,10 +9,16 @@ namespace eZbori.Web.Controllers;
 public class ForecastedResultsController(IMediator mediator) : BaseEZboriController(mediator)
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ForecastedResult>>> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var results = await _mediator.Send(new GetAllForecastedResultsQuery(), cancellationToken);
-        return Ok(results);
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var (items, total) = await _mediator.Send(new GetAllForecastedResultsQuery(page, pageSize), cancellationToken);
+        return Ok(new { items, total, page, pageSize });
     }
 
     [HttpPost]

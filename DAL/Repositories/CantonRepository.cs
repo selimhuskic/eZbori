@@ -29,13 +29,14 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
         await _dbContext.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    public Task<TableCandidateReadModel> GetCantonElectoralUnitPartiesAsync(int electionYear, CantonParliamentElectoralUnit electoralUnit)
+    public async Task<TableCandidateReadModel> GetCantonElectoralUnitPartiesAsync(int electionYear, CantonParliamentElectoralUnit electoralUnit)
     {
-        var cantonElectoralUnitParties = _dbContext.CantonElectoralUnitParties
-            .Where(x => electionYear == x.ElectionYear && x.CantonElectoralUnitCode == (int)electoralUnit);
+        var cantonElectoralUnitParties = await _dbContext.CantonElectoralUnitParties
+            .Where(x => electionYear == x.ElectionYear && x.CantonElectoralUnitCode == (int)electoralUnit)
+            .ToListAsync();
 
-        return Task.FromResult(new TableCandidateReadModel(electoralUnit.ToString(), null, cantonElectoralUnitParties.Sum(x => x.TotalVotes),
-            electionYear, cantonElectoralUnitParties.ToDictionary(y => y.Name, z => z.TotalVotes)));
+        return new TableCandidateReadModel(electoralUnit.ToString(), null, cantonElectoralUnitParties.Sum(x => x.TotalVotes),
+            electionYear, cantonElectoralUnitParties.ToDictionary(y => y.Name, z => z.TotalVotes));
     }
 
     public async Task StoreCantonMunicipalOverviewAsync(CantonMunicipalOverview model)
@@ -66,8 +67,9 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
 
     public async Task<TableCandidateReadModel> GetCantonMunicipalPartiesAsync(int electionYear, int municipalityCode)
     {
-        var cantonMunicipalPartyResult = _dbContext.CantonMunicipalParties
-            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
+        var cantonMunicipalPartyResult = await _dbContext.CantonMunicipalParties
+            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode)
+            .ToListAsync();
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 

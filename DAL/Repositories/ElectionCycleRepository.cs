@@ -15,6 +15,18 @@ public class ElectionCycleRepository(eZboriDbContext dbContext)
             .Where(c => c.ElectionType == (byte)electionType)
             .Select(c => (int)c.Year)];
 
+    public async Task<int[]> GetYearsForTypeAsync(ElectionType electionType)
+        => await _context.ElectionCycles
+            .Where(c => c.ElectionType == (byte)electionType && c.DataImported)
+            .Select(c => (int)c.Year)
+            .ToArrayAsync();
+
+    public async Task<int[]> GetAllYearsForTypeAsync(ElectionType electionType)
+        => await _context.ElectionCycles
+            .Where(c => c.ElectionType == (byte)electionType)
+            .Select(c => (int)c.Year)
+            .ToArrayAsync();
+
     public async Task<ElectionCycle> CreateAsync(ElectionCycle cycle)
     {
         await _context.ElectionCycles.AddAsync(cycle);

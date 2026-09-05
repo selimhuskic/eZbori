@@ -87,8 +87,9 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
 
     public async Task<TableCandidateReadModel> GetMunicipalityCouncilMinoritiesAsync(int electionYear, int municipalityCode)
     {
-        var municipalityMinorityCandidates = _dbContext.MunicipalityCouncilMinorities
-            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
+        var municipalityMinorityCandidates = await _dbContext.MunicipalityCouncilMinorities
+            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode)
+            .ToListAsync();
 
         var municipality = await
             _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
@@ -106,8 +107,9 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
 
     public async Task<TableCandidateReadModel> GetMunicipalityCouncilPartiesAsync(int electionYear, int municipalityCode)
     {
-        var municipalityCouncilParties = _dbContext.MunicipalityCouncilParties
-            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
+        var municipalityCouncilParties = await _dbContext.MunicipalityCouncilParties
+            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode)
+            .ToListAsync();
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 

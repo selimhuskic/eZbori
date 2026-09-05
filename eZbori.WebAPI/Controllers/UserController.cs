@@ -55,16 +55,17 @@ public class UserController(
     [HttpGet("all")]
     public async Task<IActionResult> GetAllUsers(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var all = (await _mediator.Send(new GetAllUsersQuery(), cancellationToken)).ToList();
-        var items = all
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var (users, total) = await _mediator.Send(new GetAllUsersQuery(page, pageSize), cancellationToken);
+        var items = users
             .Select(u => new AdminUserDto(u.Id, u.Email, u.UserName, u.FirstName, u.LastName, u.UserVerified, u.UserRole));
-        
-        return Ok(new { items, total = all.Count, page, pageSize });
+
+        return Ok(new { items, total, page, pageSize });
     }
 
     [HttpPost("Logout")]

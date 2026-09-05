@@ -32,6 +32,14 @@ public class GenericRepository<TModel> : IGenericRepository<TModel>
     public async Task<IEnumerable<TModel>> GetAllAsync() =>
         await _table.ToListAsync();
 
+    public async Task<(IEnumerable<TModel> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var total = await _table.CountAsync(cancellationToken);
+        var items = await _table.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        
+        return (items, total);
+    }
+
     public async Task UpdateAsync(TModel item)
     {
         _table.Update(item);

@@ -35,29 +35,18 @@ public class StateRepository(eZboriDbContext dboContext) : IStateRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public Task<TableCandidateReadModel> GetStateElectoralUnitPartiesAsync(int electionYear)
+    public async Task<TableCandidateReadModel> GetStateElectoralUnitPartiesAsync(int electionYear)
     {
-        var stateElectoralUnitParties = _dbContext.StateElectoralUnitParty
-            .Where(x => electionYear == x.ElectionYear);
+        var partyTotals = await _dbContext.StateElectoralUnitParty
+            .Where(x => x.ElectionYear == electionYear)
+            .GroupBy(x => x.PartyName)
+            .Select(g => new { PartyName = g.Key, Total = g.Sum(x => x.TotalVotes) })
+            .ToListAsync();
 
-        var readModel = new TableCandidateReadModel("Bosna i Hercegovina",
-            null,
-            stateElectoralUnitParties.Sum(x => x.TotalVotes),
-            electionYear,
-            []); ;
+        var candidateResults = partyTotals.ToDictionary(x => x.PartyName, x => x.Total);
+        var votersVoted = partyTotals.Sum(x => x.Total);
 
-        var partyNames = stateElectoralUnitParties
-            .Select(x => x.PartyName)
-            .Distinct();
-
-        foreach (var partyName in partyNames)
-        {
-            var partyResults = stateElectoralUnitParties.Where(x => x.PartyName == partyName).Sum(x => x.TotalVotes);
-
-            readModel.CandidateResults.Add(partyName, partyResults);
-        }
-
-        return Task.FromResult(readModel);
+        return new TableCandidateReadModel("Bosna i Hercegovina", null, votersVoted, electionYear, candidateResults);
     }
 
     public async Task StoreStateMunicipalOverviews(StateMunicipalOverview stateMunicipalOverview)
@@ -67,16 +56,16 @@ public class StateRepository(eZboriDbContext dboContext) : IStateRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public Task<TableOverviewReadModel> GetStateMunicipalOverviewQueryAsync(int electionYear, int municipalityCode)
+    public async Task<TableOverviewReadModel> GetStateMunicipalOverviewQueryAsync(int electionYear, int municipalityCode)
     {
-        var stateMunicipalOverview = _dbContext.StateMunicipalOverview
-            .First(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
+        var stateMunicipalOverview = await _dbContext.StateMunicipalOverview
+            .FirstAsync(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
 
-        var municipality = _dbContext.Municipalities.First(x => municipalityCode == x.Id);
+        var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 
-        return Task.FromResult(new TableOverviewReadModel(municipality.Name, electionYear, municipality.Entity.ToString(),
+        return new TableOverviewReadModel(municipality.Name, electionYear, municipality.Entity.ToString(),
             stateMunicipalOverview.NumberOfVoters, stateMunicipalOverview.TotalVotes, stateMunicipalOverview.NumberOfParties,
-            stateMunicipalOverview.PercentageTotalVotes, stateMunicipalOverview.InvalidBlankBallots, stateMunicipalOverview.InvalidOthersBallots));
+            stateMunicipalOverview.PercentageTotalVotes, stateMunicipalOverview.InvalidBlankBallots, stateMunicipalOverview.InvalidOthersBallots);
     }
 
     public async Task StoreMunicipalPartiesAsync(IEnumerable<StateMunicipalParty> stateMunicipalParties)
@@ -88,8 +77,9 @@ public class StateRepository(eZboriDbContext dboContext) : IStateRepository
 
     public async Task<TableCandidateReadModel> GetStateMunicipalPartiesAsync(int electionYear, int municipalityCode)
     {
-        var stateMunicipalPartyResult = _dbContext.StateMunicipalParty
-            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
+        var stateMunicipalPartyResult = await _dbContext.StateMunicipalParty
+            .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode)
+            .ToListAsync();
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 
