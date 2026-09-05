@@ -23,4 +23,9 @@ public interface IMunicipalityRepository
     Task<IEnumerable<int>> GetMunicipalCouncilPartyElectionYearsAsync();
     Task<IEnumerable<int>> GetMunicipalCouncilMinirotiesElectionYearsAsync();
     Task<IEnumerable<SearchRecommendationDto>> GetSearchRecommendationAsync();
+    Task DeleteCandidateDetailsByYearAsync(int year);
+    Task DeleteCandidateOverviewByYearAsync(int year);
+    Task DeleteCouncilOverviewByYearAsync(int year);
+    Task DeleteCouncilPartiesByYearAsync(int year);
+    Task DeleteCouncilMinoritiesByYearAsync(int year);
 }

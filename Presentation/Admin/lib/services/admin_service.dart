@@ -42,25 +42,37 @@ class AdminService {
     }
   }
 
+  /// Returns the jobId string on success, or an error message string on failure.
   Future<String?> importAll(int electionType, int year) async {
     try {
       final response = await ApiClient.dio.post(
         '/Bootstrap/import',
         data: {'electionType': electionType, 'year': year},
-        options: Options(receiveTimeout: _bootstrapTimeout),
+        options: Options(receiveTimeout: const Duration(seconds: 10)),
       );
-      if (response.statusCode == 202) return '__background__';
-      return response.statusCode == 200 ? null : 'HTTP ${response.statusCode}';
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.connectionTimeout) {
-        return '__timeout__';
+      if (response.statusCode == 202) {
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          return data['jobId']?.toString();
+        }
       }
+      return 'HTTP ${response.statusCode}';
+    } on DioException catch (e) {
       return e.response?.data?.toString() ?? e.message ?? e.type.name;
     } catch (e) {
       return e.toString();
     }
+  }
+
+  /// Returns {'status': 'Queued'|'Running'|'Completed'|'Failed', 'errorMessage': ...?}
+  Future<Map<String, dynamic>?> getImportStatus(String jobId) async {
+    try {
+      final response = await ApiClient.dio.get('/Bootstrap/import/status/$jobId');
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
   }
 
   // Election cycles

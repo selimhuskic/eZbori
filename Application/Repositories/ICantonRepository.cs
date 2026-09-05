@@ -20,4 +20,8 @@ public interface ICantonRepository
     Task<IEnumerable<int>> GetMunicipalOverviewElectionYearsAsync(IEnumerable<int> municipalityCodes);
     Task<IEnumerable<int>> GetMunicipalPartyElectionYearsAsync(IEnumerable<int> municipalityCodes);
     Task<IEnumerable<SearchRecommendationDto>> GetSearchRecommendationAsync();
+    Task DeleteCantonElectoralUnitOverviewAsync(int year);
+    Task DeleteCantonElectoralUnitPartiesAsync(int year);
+    Task DeleteCantonMunicipalOverviewAsync(int year);
+    Task DeleteCantonMunicipalPartiesAsync(int year);
 }

@@ -115,6 +115,26 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
          .ToArrayAsync();
     }
 
+    public async Task DeleteCantonElectoralUnitOverviewAsync(int year)
+        => await _dbContext.CantonElectoralUnitOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCantonElectoralUnitPartiesAsync(int year)
+        => await _dbContext.CantonElectoralUnitParties
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCantonMunicipalOverviewAsync(int year)
+        => await _dbContext.CantonMunicipalOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCantonMunicipalPartiesAsync(int year)
+        => await _dbContext.CantonMunicipalParties
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
     public async Task<IEnumerable<SearchRecommendationDto>> GetSearchRecommendationAsync()
     {
         var electionYears = await _dbContext.CantonElectoralUnitOverview

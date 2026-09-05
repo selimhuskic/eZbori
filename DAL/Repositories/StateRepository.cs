@@ -152,6 +152,26 @@ public class StateRepository(eZboriDbContext dboContext) : IStateRepository
             .Concat(yearsMunicipalParty.Select(y => new SearchRecommendationDto(0, typeof(StateMunicipalParty).ToString(), y, y.GetRelevance(electionYears, typeof(StateMunicipalParty)))));
     }
 
+    public async Task DeleteElectoralUnitOverviewAsync(int year)
+        => await _dbContext.StateElectoralUnitOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteElectoralUnitPartiesAsync(int year)
+        => await _dbContext.StateElectoralUnitParty
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteStateMunicipalOverviewAsync(int year)
+        => await _dbContext.StateMunicipalOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteStateMunicipalPartiesAsync(int year)
+        => await _dbContext.StateMunicipalParty
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
     private static Entity GetEntityForElectoralUnit(StateParliamentElectoralUnit electoralUnit) =>
         electoralUnit is StateParliamentElectoralUnit.F1 or StateParliamentElectoralUnit.F2 or StateParliamentElectoralUnit.F3 or StateParliamentElectoralUnit.F4 or StateParliamentElectoralUnit.F5
         ? Entity.Federation

@@ -1,6 +1,0 @@
-@eZbori.MainAPI_HostAddress = http://localhost:5249
-
-GET {{eZbori.MainAPI_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

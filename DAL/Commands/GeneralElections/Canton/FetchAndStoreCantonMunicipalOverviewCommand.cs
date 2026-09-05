@@ -4,18 +4,16 @@ using MediatR;
 
 namespace DAL.Commands.GeneralElections.Canton;
 
-public record FetchAndStoreCantonMunicipalOverviewCommand() : IRequest;
+public record FetchAndStoreCantonMunicipalOverviewCommand(short Year) : IRequest;
 
 public class FetchAndStoreCantonMunicipalOverviewCommandHandler(
     ICantonClient cantonClient,
-    IElectionYearsService electionYearsService,
     ICantonMappingService mappingService,
     ICantonRepository repository,
     IMunicipalityServiceRepository municipalityRepo,
     IElectionCycleRepository cycleRepository) : IRequestHandler<FetchAndStoreCantonMunicipalOverviewCommand>
 {
     private readonly ICantonClient _cantonClient = cantonClient;
-    private readonly IElectionYearsService _electionYearsService = electionYearsService;
     private readonly ICantonMappingService _mappingService = mappingService;
     private readonly ICantonRepository _repository = repository;
     private readonly IMunicipalityServiceRepository _municipalityRepo = municipalityRepo;
@@ -23,33 +21,24 @@ public class FetchAndStoreCantonMunicipalOverviewCommandHandler(
 
     public async Task Handle(FetchAndStoreCantonMunicipalOverviewCommand request, CancellationToken cancellationToken)
     {
-        var electionYears = _electionYearsService.GetGeneralElectionYears();
         var municipalityCodes = _municipalityRepo.GetAllMunicipalityCodes(Application.Enum.Entity.Federation);
 
-        var seededCantonMunicipalOverviewYears = await _repository
-            .GetMunicipalOverviewElectionYearsAsync(municipalityCodes);
+        await _repository.DeleteCantonMunicipalOverviewAsync(request.Year);
 
-        electionYears = electionYears
-            .Where(ey => !seededCantonMunicipalOverviewYears.Contains(ey))
-            .ToArray();
+        var cycle = await _cycleRepository.GetByYearAndTypeAsync(request.Year, ElectionType.GeneralElection);
 
-        foreach (var electionYear in electionYears)
+        foreach (var municipalityCode in municipalityCodes)
         {
-            var cycle = await _cycleRepository.GetByYearAndTypeAsync((short)electionYear, ElectionType.GeneralElection);
+            var url = $"{cycle.ApiBaseUrl}/race7_electoralunitbasicinfo/{cycle.ResultKey}/{municipalityCode}";
 
-            foreach (var municipalityCode in municipalityCodes)
-            {
-                var url = $"{cycle.ApiBaseUrl}/race7_electoralunitbasicinfo/{cycle.ResultKey}/{municipalityCode}";
+            var cantonMunicipalOverview = await _cantonClient.GetCantonMunicipalOverviewAsync(url)
+                .ConfigureAwait(false);
 
-                var cantonMunicipalOverview = await _cantonClient.GetCantonMunicipalOverviewAsync(url)
-                    .ConfigureAwait(false);
+            var cantonCode = _municipalityRepo.GetCantonCode(municipalityCode);
 
-                var cantonCode = _municipalityRepo.GetCantonCode(municipalityCode);
+            var model = _mappingService.MapCantonMunicipalOverview(cantonMunicipalOverview, request.Year, cantonCode, municipalityCode);
 
-                var model = _mappingService.MapCantonMunicipalOverview(cantonMunicipalOverview, electionYear, cantonCode, municipalityCode);
-
-                await _repository.StoreCantonMunicipalOverviewAsync(model).ConfigureAwait(false);
-            }
+            await _repository.StoreCantonMunicipalOverviewAsync(model).ConfigureAwait(false);
         }
     }
 }

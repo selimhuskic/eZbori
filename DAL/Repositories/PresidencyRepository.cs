@@ -130,4 +130,24 @@ public class PresidencyRepository(eZboriDbContext dboContext) : IPresidencyRepos
             .Distinct()
             .ToArrayAsync();
     }
+
+    public async Task DeletePresidencyOverviewAsync(int year, Entity entity)
+        => await _dbContext.PresidencyOverview
+            .Where(x => x.ElectionYear == year && x.Entity == entity)
+            .ExecuteDeleteAsync();
+
+    public async Task DeletePresidencyResultsAsync(int year, Constituency constituency)
+        => await _dbContext.PresidencyResults
+            .Where(x => x.ElectionYear == year && x.Constituency == constituency)
+            .ExecuteDeleteAsync();
+
+    public async Task DeletePresidencyMunicipalOverviewAsync(int year)
+        => await _dbContext.PresidencyMunicipalOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeletePresidencyMunicipalResultsAsync(int year)
+        => await _dbContext.PresidencyMunicipalResults
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
 }

@@ -27,6 +27,7 @@ public static class ApplicationServicesConfiguration
         services.AddSingleton<RabbitMqPersistentConnection>();
         services.AddScoped<IUserInviteQueue, RabbitMqUserInviteQueue>();
         services.AddScoped<IPasswordResetQueue, RabbitMqPasswordResetQueue>();
+        services.AddScoped<IImportQueue, RabbitMqImportQueue>();
         services.AddMemoryCache();
     }
 }

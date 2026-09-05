@@ -1,22 +1,21 @@
 using Application.Services;
+using Application.Services;
 using External.CentralElectionCommiteeHttpClients;
 using MediatR;
 
 namespace DAL.Commands.GeneralElections.Presidency;
 
-public record FetchAndStorePresidencyResultsCommand(Constituency Constituency) : IRequest;
+public record FetchAndStorePresidencyResultsCommand(Constituency Constituency, short Year) : IRequest;
 
 public class FetchAndStorePresidencyResultsCroatCommandHandler(
     IPresidencyClient centralCommissionClient,
     IPresidencyMappingService mappingService,
     IPresidencyRepository repository,
-    IElectionYearsService electionYearsService,
     IElectionCycleRepository cycleRepository) : IRequestHandler<FetchAndStorePresidencyResultsCommand>
 {
     private readonly IPresidencyClient _centralCommissionClient = centralCommissionClient;
     private readonly IPresidencyRepository _repository = repository;
     private readonly IPresidencyMappingService _mappingService = mappingService;
-    private readonly IElectionYearsService _electionYearsService = electionYearsService;
     private readonly IElectionCycleRepository _cycleRepository = cycleRepository;
 
     public async Task Handle(FetchAndStorePresidencyResultsCommand request, CancellationToken cancellationToken)
@@ -29,26 +28,16 @@ public class FetchAndStorePresidencyResultsCroatCommandHandler(
             _ => throw new ArgumentOutOfRangeException(nameof(request.Constituency))
         };
 
-        var electionYears = _electionYearsService.GetGeneralElectionYears();
+        await _repository.DeletePresidencyResultsAsync(request.Year, request.Constituency);
 
-        var seededPresidencyMunicipalYears = await _repository
-            .GetPresidencyResultsElectionYearsAsync(request.Constituency);
+        var cycle = await _cycleRepository.GetByYearAndTypeAsync(request.Year, ElectionType.GeneralElection);
+        var resultsUri = $"{cycle.ApiBaseUrl}/race1_memberpresidencycandidatesresult/{cycle.ResultKey}/{constituencyCode}/1";
 
-        electionYears = electionYears
-            .Where(ey => !seededPresidencyMunicipalYears.Contains(ey))
-            .ToArray();
+        var presidencyResultsDtos = await _centralCommissionClient
+            .GetPresidentialResultsAsync(resultsUri);
 
-        foreach (var electionYear in electionYears)
-        {
-            var cycle = await _cycleRepository.GetByYearAndTypeAsync((short)electionYear, ElectionType.GeneralElection);
-            var resultsUri = $"{cycle.ApiBaseUrl}/race1_memberpresidencycandidatesresult/{cycle.ResultKey}/{constituencyCode}/1";
+        var presidencyResults = _mappingService.MapPresidencyResults(presidencyResultsDtos, request.Year, request.Constituency);
 
-            var presidencyResultsDtos = await _centralCommissionClient
-                .GetPresidentialResultsAsync(resultsUri);
-
-            var presidencyResults = _mappingService.MapPresidencyResults(presidencyResultsDtos, electionYear, request.Constituency);
-
-            await _repository.StorePresidencyResultsAsync(presidencyResults);
-        }
+        await _repository.StorePresidencyResultsAsync(presidencyResults);
     }
 }

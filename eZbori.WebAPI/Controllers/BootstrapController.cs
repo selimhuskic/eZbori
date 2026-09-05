@@ -1,6 +1,7 @@
-﻿using Application.DTOs;
+using Application.DTOs;
 using Application.Enum;
 using Application.Repositories;
+using Application.Services;
 using DAL.Commands.GeneralElections.Canton;
 using DAL.Commands.GeneralElections.Entity;
 using DAL.Commands.GeneralElections.Presidency;
@@ -14,283 +15,194 @@ namespace eZbori.Web.Controllers;
 [ApiController]
 public class BootstrapController(
     IMediator mediator,
-    IElectionCycleRepository electionCycleRepository,
-    IServiceScopeFactory scopeFactory,
-    ILogger<BootstrapController> logger)
+    IImportJobRepository importJobRepository,
+    IImportQueue importQueue)
     : BaseEZboriController(mediator)
 {
-    private readonly IElectionCycleRepository _electionCycleRepository = electionCycleRepository;
-    private static readonly SemaphoreSlim _importLock = new(1, 1);
+    private readonly IImportJobRepository _importJobRepository = importJobRepository;
+    private readonly IImportQueue _importQueue = importQueue;
 
     [HttpPost("import")]
     public async Task<IActionResult> Import([FromBody] ImportRequest request, CancellationToken cancellationToken)
     {
-        if (!await _importLock.WaitAsync(0, cancellationToken))
-            return Conflict("Uvoz je već u toku. Pokušajte za nekoliko minuta.");
-
-        var cycle = await _electionCycleRepository.GetByYearAndTypeAsync(request.Year, request.ElectionType);
-        if (cycle.DataImported)
-        {
-            _importLock.Release();
-            return Conflict("Podaci za ovaj izborni ciklus su već uvezeni.");
-        }
-
-        var electionType = request.ElectionType;
-        var year = request.Year;
-
-        _ = Task.Run(async () =>
-        {
-            using var scope = scopeFactory.CreateScope();
-            var med = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var repo = scope.ServiceProvider.GetRequiredService<IElectionCycleRepository>();
-            try
-            {
-                logger.LogInformation("Bootstrap import started: {Year}/{Type}", year, electionType);
-
-                if (electionType == ElectionType.GeneralElection)
-                {
-                    await med.Send(new FetchAndStorePresidencyOverviewCommand(Entity.Federation), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyOverviewCommand(Entity.RS), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyOverviewMunicipalLevelCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyResultsMunicipalLevelCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyResultsCommand(Constituency.Bosniak), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyResultsCommand(Constituency.Croat), CancellationToken.None);
-                    await med.Send(new FetchAndStorePresidencyResultsCommand(Constituency.Serb), CancellationToken.None);
-                    await med.Send(new FetchAndStoreElectoralUnitOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreElectoralUnitPartiesCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreStateMunicipalOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreStateMunicipalPartiesCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityElectoralUnitOverviewCommand(Entity.Federation), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityElectoralUnitOverviewCommand(Entity.RS), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityElectoralUnitPartiesCommand(Entity.Federation), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityElectoralUnitPartiesCommand(Entity.RS), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityPresidentOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityPresidentMunicipalResultsCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalOverviewCommand(Entity.Federation), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalOverviewCommand(Entity.RS), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityMunicipalPartyCommand(Entity.Federation), CancellationToken.None);
-                    await med.Send(new FetchAndStoreEntityMunicipalPartyCommand(Entity.RS), CancellationToken.None);
-                    await med.Send(new FetchAndStoreCantonElectoralUnitOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreCantonElectoralUnitPartyCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreCantonMunicipalOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreCantonMunicipalPartyCommand(), CancellationToken.None);
-                }
-                else
-                {
-                    await med.Send(new FetchAndStoreMunicipalCandidateDetailsCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalCandidateOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalCouncilOverviewCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalCouncilPartyCommand(), CancellationToken.None);
-                    await med.Send(new FetchAndStoreMunicipalityCouncilMinorityCommand(), CancellationToken.None);
-                }
-
-                await repo.MarkImportedAsync(year, electionType);
-                logger.LogInformation("Bootstrap import completed successfully: {Year}/{Type}", year, electionType);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Bootstrap import failed: {Year}/{Type}", year, electionType);
-            }
-            finally
-            {
-                _importLock.Release();
-            }
-        });
-
-        return Accepted(new { message = "Uvoz je pokrenut u pozadini. Provjeri dropdown za nekoliko minuta." });
+        var job = await _importJobRepository.CreateAsync((int)request.ElectionType, request.Year);
+        await _importQueue.PublishAsync(new ImportJobMessage(job.Id, (int)request.ElectionType, request.Year));
+        return Accepted(new { jobId = job.Id });
     }
 
-
+    [HttpGet("import/status/{jobId:guid}")]
+    public async Task<IActionResult> GetImportStatus(Guid jobId)
+    {
+        var job = await _importJobRepository.GetByIdAsync(jobId);
+        if (job is null) return NotFound();
+        return Ok(new { status = job.Status.ToString(), errorMessage = job.ErrorMessage });
+    }
 
     [HttpGet("presidency/federation")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistPresidencyFederationOverview()
+    public async Task<IActionResult> FetchAndPersistPresidencyFederationOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStorePresidencyOverviewCommand(Entity.Federation));
-
+        await _mediator.Send(new FetchAndStorePresidencyOverviewCommand(Entity.Federation, year));
         return Ok();
     }
 
     [HttpGet("presidency/rs")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistPresidencyRSOverview()
+    public async Task<IActionResult> FetchAndPersistPresidencyRSOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStorePresidencyOverviewCommand(Entity.RS));
-
+        await _mediator.Send(new FetchAndStorePresidencyOverviewCommand(Entity.RS, year));
         return Ok();
     }
 
     [HttpGet("presidency/municipal/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistPresidencyMunicipalOverview()
+    public async Task<IActionResult> FetchAndPersistPresidencyMunicipalOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStorePresidencyOverviewMunicipalLevelCommand());
-
+        await _mediator.Send(new FetchAndStorePresidencyOverviewMunicipalLevelCommand(year));
         return Ok();
     }
 
     [HttpGet("presidency/municipal/results")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistPresidencyResults()
+    public async Task<IActionResult> FetchAndPersistPresidencyResults([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStorePresidencyResultsMunicipalLevelCommand());
-
+        await _mediator.Send(new FetchAndStorePresidencyResultsMunicipalLevelCommand(year));
         return Ok();
     }
 
     [HttpGet("presidency")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistPresidencyCroat([FromQuery] Constituency constituency)
+    public async Task<IActionResult> FetchAndPersistPresidencyByConstituency([FromQuery] Constituency constituency, [FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStorePresidencyResultsCommand(constituency));
-
+        await _mediator.Send(new FetchAndStorePresidencyResultsCommand(constituency, year));
         return Ok();
     }
 
     [HttpGet("state/electoralUnits/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistStateElectoralUnitOverview()
+    public async Task<IActionResult> FetchAndPersistStateElectoralUnitOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreElectoralUnitOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreElectoralUnitOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("state/electoralUnits/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistStateElectoralUnitParties()
+    public async Task<IActionResult> FetchAndPersistStateElectoralUnitParties([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreElectoralUnitPartiesCommand());
-
+        await _mediator.Send(new FetchAndStoreElectoralUnitPartiesCommand(year));
         return Ok();
     }
 
     [HttpGet("state/municipalities/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistStateMunicipalitiesOverview()
+    public async Task<IActionResult> FetchAndPersistStateMunicipalitiesOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreStateMunicipalOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreStateMunicipalOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("state/municipalities/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistStateMunicipalityParties()
+    public async Task<IActionResult> FetchAndPersistStateMunicipalityParties([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreStateMunicipalPartiesCommand());
-
+        await _mediator.Send(new FetchAndStoreStateMunicipalPartiesCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/electoralUnits/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistEntityElectoralUnitOverview([FromQuery] Entity entity)
+    public async Task<IActionResult> FetchAndPersistEntityElectoralUnitOverview([FromQuery] Entity entity, [FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreEntityElectoralUnitOverviewCommand(entity));
-
+        await _mediator.Send(new FetchAndStoreEntityElectoralUnitOverviewCommand(entity, year));
         return Ok();
     }
 
     [HttpGet("entity/electoralUnits/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistEntityElectoralUnitParties([FromQuery] Entity entity)
+    public async Task<IActionResult> FetchAndPersistEntityElectoralUnitParties([FromQuery] Entity entity, [FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreEntityElectoralUnitPartiesCommand(entity));
-
+        await _mediator.Send(new FetchAndStoreEntityElectoralUnitPartiesCommand(entity, year));
         return Ok();
     }
 
     [HttpGet("entity/entityPresident/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistEntityPresidentOverview()
+    public async Task<IActionResult> FetchAndPersistEntityPresidentOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreEntityPresidentOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreEntityPresidentOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/entityPresident/municipal")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistEntityPresidentMunicipal()
+    public async Task<IActionResult> FetchAndPersistEntityPresidentMunicipal([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreEntityPresidentMunicipalResultsCommand());
-
+        await _mediator.Send(new FetchAndStoreEntityPresidentMunicipalResultsCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/municipal/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalOverview([FromQuery] Entity entity)
+    public async Task<IActionResult> FetchAndPersistMunicipalOverview([FromQuery] Entity entity, [FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalOverviewCommand(entity));
-
+        await _mediator.Send(new FetchAndStoreMunicipalOverviewCommand(entity, year));
         return Ok();
     }
 
     [HttpGet("entity/municipal/party")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalParty([FromQuery] Entity entity)
+    public async Task<IActionResult> FetchAndPersistMunicipalParty([FromQuery] Entity entity, [FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreEntityMunicipalPartyCommand(entity));
-
+        await _mediator.Send(new FetchAndStoreEntityMunicipalPartyCommand(entity, year));
         return Ok();
     }
 
     [HttpGet("entity/canton/electoralUnit/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistCantonElectoralUnitOverview()
+    public async Task<IActionResult> FetchAndPersistCantonElectoralUnitOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreCantonElectoralUnitOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreCantonElectoralUnitOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/canton/electoralUnit/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistCantonElectoralUnitParties()
+    public async Task<IActionResult> FetchAndPersistCantonElectoralUnitParties([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreCantonElectoralUnitPartyCommand());
-
+        await _mediator.Send(new FetchAndStoreCantonElectoralUnitPartyCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/canton/municipal/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistCantonMunicipalOverview()
+    public async Task<IActionResult> FetchAndPersistCantonMunicipalOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreCantonMunicipalOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreCantonMunicipalOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("entity/canton/municipal/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistCantonMunicipalParties()
+    public async Task<IActionResult> FetchAndPersistCantonMunicipalParties([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreCantonMunicipalPartyCommand());
-
+        await _mediator.Send(new FetchAndStoreCantonMunicipalPartyCommand(year));
         return Ok();
     }
 
     [HttpGet("municipality/candidate/details")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalityCandidateDetails()
+    public async Task<IActionResult> FetchAndPersistMunicipalityCandidateDetails([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalCandidateDetailsCommand());
-
+        await _mediator.Send(new FetchAndStoreMunicipalCandidateDetailsCommand(year));
         return Ok();
     }
 
     [HttpGet("municipality/candidate/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalityCandidateOverview()
+    public async Task<IActionResult> FetchAndPersistMunicipalityCandidateOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalCandidateOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreMunicipalCandidateOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("municipality/council/overview")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalityCouncilOverview()
+    public async Task<IActionResult> FetchAndPersistMunicipalityCouncilOverview([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalCouncilOverviewCommand());
-
+        await _mediator.Send(new FetchAndStoreMunicipalCouncilOverviewCommand(year));
         return Ok();
     }
 
     [HttpGet("municipality/council/parties")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalityCouncilParties()
+    public async Task<IActionResult> FetchAndPersistMunicipalityCouncilParties([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalCouncilPartyCommand());
-
+        await _mediator.Send(new FetchAndStoreMunicipalCouncilPartyCommand(year));
         return Ok();
     }
 
     [HttpGet("municipality/council/minorities")]
-    public async Task<ActionResult<HttpResponse>> FetchAndPersistMunicipalityCouncilMinorities()
+    public async Task<IActionResult> FetchAndPersistMunicipalityCouncilMinorities([FromQuery] short year)
     {
-        await _mediator.Send(new FetchAndStoreMunicipalityCouncilMinorityCommand());
-
+        await _mediator.Send(new FetchAndStoreMunicipalityCouncilMinorityCommand(year));
         return Ok();
     }
 }

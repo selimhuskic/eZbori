@@ -17,13 +17,13 @@ public class LocalElectionsClient(HttpClient httpClient) : CommonCentralElection
     public async Task<MunicipalityCandidateOverviewDto?> GetMunicipalityCandidateOverviewAsync(string url)
     {
         var contentString = await FetchAndEnsureSuccess(_httpClient, url).ConfigureAwait(false);
-        return contentString.Contains("null") ? null : JsonConvert.DeserializeObject<MunicipalityCandidateOverviewDto>(contentString);
+        return JsonConvert.DeserializeObject<MunicipalityCandidateOverviewDto?>(contentString);
     }
 
     public async Task<MunicipalityCouncilOverviewDto?> GetMunicipalityCouncilOverviewAsync(string url)
     {
         var contentString = await FetchAndEnsureSuccess(_httpClient, url).ConfigureAwait(false);
-        return contentString.Contains("null") ? null : JsonConvert.DeserializeObject<MunicipalityCouncilOverviewDto>(contentString);
+        return JsonConvert.DeserializeObject<MunicipalityCouncilOverviewDto?>(contentString);
     }
 
     public async Task<IEnumerable<MunicipalityCouncilPartyDto>> GetMunicipalityCouncilPartiesAsync(string url)

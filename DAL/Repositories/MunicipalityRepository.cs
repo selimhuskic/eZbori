@@ -175,6 +175,31 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
         .ToArrayAsync();
     }
 
+    public async Task DeleteCandidateDetailsByYearAsync(int year)
+        => await _dbContext.MunicipalityCandidateDetails
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCandidateOverviewByYearAsync(int year)
+        => await _dbContext.MunicipalityCandidateOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCouncilOverviewByYearAsync(int year)
+        => await _dbContext.MunicipalityCouncilOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCouncilPartiesByYearAsync(int year)
+        => await _dbContext.MunicipalityCouncilParties
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteCouncilMinoritiesByYearAsync(int year)
+        => await _dbContext.MunicipalityCouncilMinorities
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
     public async Task<IEnumerable<SearchRecommendationDto>> GetSearchRecommendationAsync()
     {
         var electionYears = await _dbContext.MunicipalityCouncilOverview

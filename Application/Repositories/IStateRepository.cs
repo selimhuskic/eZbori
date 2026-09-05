@@ -20,4 +20,8 @@ public interface IStateRepository
     Task<IEnumerable<int>> GetElectoralUnitMunicipalOverviewElectionYearsAsync();
     Task<IEnumerable<int>> GetElectoralUnitMunicipalPartiesElectionYearsAsync();
     Task<IEnumerable<SearchRecommendationDto>> GetSearchRecommendationAsync();
+    Task DeleteElectoralUnitOverviewAsync(int year);
+    Task DeleteElectoralUnitPartiesAsync(int year);
+    Task DeleteStateMunicipalOverviewAsync(int year);
+    Task DeleteStateMunicipalPartiesAsync(int year);
 }

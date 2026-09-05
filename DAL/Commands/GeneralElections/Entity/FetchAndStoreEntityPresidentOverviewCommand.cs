@@ -1,46 +1,35 @@
 using Application.Services;
+using Application.Services;
 using External.CentralElectionCommiteeHttpClients;
 using MediatR;
 
 namespace DAL.Commands.GeneralElections.Entity;
 
-public record FetchAndStoreEntityPresidentOverviewCommand() : IRequest;
+public record FetchAndStoreEntityPresidentOverviewCommand(short Year) : IRequest;
 
 public class FetchAndStoreEntityPresidentOverviewCommandHandler(
     IEntityClient entityClient,
-    IElectionYearsService electionYearsService,
     IEntityMappingService mappingService,
     IEntityRepository repository,
     IElectionCycleRepository cycleRepository) : IRequestHandler<FetchAndStoreEntityPresidentOverviewCommand>
 {
     private readonly IEntityClient _entityClient = entityClient;
-    private readonly IElectionYearsService _electionYearsService = electionYearsService;
     private readonly IEntityMappingService _mappingService = mappingService;
     private readonly IEntityRepository _repository = repository;
     private readonly IElectionCycleRepository _cycleRepository = cycleRepository;
 
     public async Task Handle(FetchAndStoreEntityPresidentOverviewCommand request, CancellationToken cancellationToken)
     {
-        var electionYears = _electionYearsService.GetGeneralElectionYears();
+        await _repository.DeleteEntityPresidentOverviewAsync(request.Year);
 
-        var seededMunicipalityPartyYears = await _repository
-           .GetEntityPresidentOverviewElectionYearsAsync(Application.Enum.Entity.RS);
+        var cycle = await _cycleRepository.GetByYearAndTypeAsync(request.Year, ElectionType.GeneralElection);
+        var url = $"{cycle.ApiBaseUrl}/race5_basicinfo/{cycle.ResultKey}";
 
-        electionYears = electionYears
-            .Where(ey => !seededMunicipalityPartyYears.Contains(ey))
-            .ToArray();
+        var entityPresidentOverview = await _entityClient.GetEntityPresidentOverviewAsync(url)
+            .ConfigureAwait(false);
 
-        foreach (var electionYear in electionYears)
-        {
-            var cycle = await _cycleRepository.GetByYearAndTypeAsync((short)electionYear, ElectionType.GeneralElection);
-            var url = $"{cycle.ApiBaseUrl}/race5_basicinfo/{cycle.ResultKey}";
+        var model = _mappingService.MapEntityPresidentOverview(entityPresidentOverview, request.Year, Application.Enum.Entity.RS);
 
-            var entityPresidentOverview = await _entityClient.GetEntityPresidentOverviewAsync(url)
-                .ConfigureAwait(false);
-
-            var model = _mappingService.MapEntityPresidentOverview(entityPresidentOverview, electionYear, Application.Enum.Entity.RS);
-
-            await _repository.StoreEntityPresidentOverviewAsync(model).ConfigureAwait(false);
-        }
+        await _repository.StoreEntityPresidentOverviewAsync(model).ConfigureAwait(false);
     }
 }

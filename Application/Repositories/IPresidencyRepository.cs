@@ -20,4 +20,8 @@ public interface IPresidencyRepository
     Task<IEnumerable<int>> GetPresidencyResultsElectionYearsAsync(Constituency constituency);
     Task<IEnumerable<int>> GetPresidencyOverviewMunicipalElectionYearsAsync();
     Task<IEnumerable<int>> GetPresidencyResultsMunicipalLevelElectionYearsAsync();
+    Task DeletePresidencyOverviewAsync(int year, Entity entity);
+    Task DeletePresidencyResultsAsync(int year, Constituency constituency);
+    Task DeletePresidencyMunicipalOverviewAsync(int year);
+    Task DeletePresidencyMunicipalResultsAsync(int year);
 }

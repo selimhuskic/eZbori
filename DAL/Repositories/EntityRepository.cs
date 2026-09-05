@@ -215,4 +215,34 @@ public class EntityRepository(eZboriDbContext dboContext) : IEntityRepository
            .Distinct()
            .ToArrayAsync();
     }
+
+    public async Task DeleteEntityElectoralUnitOverviewAsync(int year, IEnumerable<int> electoralUnitCodes)
+        => await _dbContext.EntityElectoralUnitOverview
+            .Where(x => x.ElectionYear == year && electoralUnitCodes.Contains(x.ElectoralUnitCode))
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteEntityElectoralUnitPartiesAsync(int year, IEnumerable<int> electoralUnitCodes)
+        => await _dbContext.EntityElectoralUnitParty
+            .Where(x => x.ElectionYear == year && electoralUnitCodes.Contains(x.ElectoralUnitCode))
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteEntityPresidentOverviewAsync(int year)
+        => await _dbContext.EntityPresidentOverview
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteEntityPresidentMunicipalAsync(int year)
+        => await _dbContext.EntityPresidentMunicipalCandidate
+            .Where(x => x.ElectionYear == year)
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteEntityMunicipalOverviewAsync(int year, IEnumerable<int> municipalityCodes)
+        => await _dbContext.EntityMunicipalOverview
+            .Where(x => x.ElectionYear == year && municipalityCodes.Contains(x.MunicipalityCode))
+            .ExecuteDeleteAsync();
+
+    public async Task DeleteEntityMunicipalPartyAsync(int year, IEnumerable<int> municipalityCodes)
+        => await _dbContext.EntityMunicipalParty
+            .Where(x => x.ElectionYear == year && municipalityCodes.Contains(x.MunicipalityCode))
+            .ExecuteDeleteAsync();
 }

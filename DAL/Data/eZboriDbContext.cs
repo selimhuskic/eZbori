@@ -77,4 +77,5 @@ public class eZboriDbContext : DbContext
     public DbSet<ForecastedResult> ForecastedResults { get; set; }
     public DbSet<SavedSearch> SavedSearches { get; set; }
     public DbSet<ElectionCycle> ElectionCycles { get; set; }
+    public DbSet<ImportJob> ImportJobs { get; set; }
 }

@@ -27,4 +27,10 @@ public interface IEntityRepository
     Task<IEnumerable<int>> GetEntityPresidentMunicipalElectionYearsAsync(IEnumerable<int> municipalityCodes);
     Task<IEnumerable<int>> GetEntityPresidentOverviewElectionYearsAsync(Entity entity);
     Task<IEnumerable<int>> GetMunicipalityOverviewYearsAsync();
+    Task DeleteEntityElectoralUnitOverviewAsync(int year, IEnumerable<int> electoralUnitCodes);
+    Task DeleteEntityElectoralUnitPartiesAsync(int year, IEnumerable<int> electoralUnitCodes);
+    Task DeleteEntityPresidentOverviewAsync(int year);
+    Task DeleteEntityPresidentMunicipalAsync(int year);
+    Task DeleteEntityMunicipalOverviewAsync(int year, IEnumerable<int> municipalityCodes);
+    Task DeleteEntityMunicipalPartyAsync(int year, IEnumerable<int> municipalityCodes);
 }

@@ -15,6 +15,6 @@
     <File Path=".editorconfig" />
   </Folder>
   <Project Path="Boundary/Boundary.csproj" />
-  <Project Path="eZbori.MainAPI/eZbori.Sender.csproj" />
+  <Project Path="eZbori.Sender/eZbori.Sender.csproj" />
   <Project Path="eZbori.WebAPI/eZbori.Web.csproj" />
 </Solution>

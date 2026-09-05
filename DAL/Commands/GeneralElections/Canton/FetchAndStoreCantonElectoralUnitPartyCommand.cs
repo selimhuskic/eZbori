@@ -4,50 +4,39 @@ using MediatR;
 
 namespace DAL.Commands.GeneralElections.Canton;
 
-public record FetchAndStoreCantonElectoralUnitPartyCommand() : IRequest;
+public record FetchAndStoreCantonElectoralUnitPartyCommand(short Year) : IRequest;
 
 public class FetchAndStoreCantonElectoralUnitPartyCommandHandler(
     ICantonRepository repository,
     IMunicipalityServiceRepository municipalityRepo,
     ICantonMappingService mappingService,
-    IElectionYearsService electionYearsService,
     ICantonClient cantonClient,
     IElectionCycleRepository cycleRepository) : IRequestHandler<FetchAndStoreCantonElectoralUnitPartyCommand>
 {
     private readonly ICantonRepository _repository = repository;
     private readonly IMunicipalityServiceRepository _municipalityRepo = municipalityRepo;
     private readonly ICantonMappingService _mappingService = mappingService;
-    private readonly IElectionYearsService _electionYearsService = electionYearsService;
     private readonly ICantonClient _cantonClient = cantonClient;
     private readonly IElectionCycleRepository _cycleRepository = cycleRepository;
 
     public async Task Handle(FetchAndStoreCantonElectoralUnitPartyCommand request, CancellationToken cancellationToken)
     {
-        var electionYears = _electionYearsService.GetGeneralElectionYears();
         var cantonCodes = _municipalityRepo.GetDistinctCantonCodes();
 
-        var seededCantonMunicipalPartyYears = await _repository
-            .GetElectoralUnitPartyElectionYearsAsync(cantonCodes);
+        await _repository.DeleteCantonElectoralUnitPartiesAsync(request.Year);
 
-        electionYears = electionYears
-            .Where(ey => !seededCantonMunicipalPartyYears.Contains(ey))
-            .ToArray();
+        var cycle = await _cycleRepository.GetByYearAndTypeAsync(request.Year, ElectionType.GeneralElection);
 
-        foreach (var electionYear in electionYears)
+        foreach (var cantonCode in cantonCodes)
         {
-            var cycle = await _cycleRepository.GetByYearAndTypeAsync((short)electionYear, ElectionType.GeneralElection);
+            var url = $"{cycle.ApiBaseUrl}/race7_electoralunitparentpartyresult/{cycle.ResultKey}/{cantonCode}/1";
 
-            foreach (var cantonCode in cantonCodes)
-            {
-                var url = $"{cycle.ApiBaseUrl}/race7_electoralunitparentpartyresult/{cycle.ResultKey}/{cantonCode}/1";
+            var cantonElectoralUnitParties = await _cantonClient.GetCantonElectoralUnitPartiesAsync(url)
+                .ConfigureAwait(false);
 
-                var cantonElectoralUnitParties = await _cantonClient.GetCantonElectoralUnitPartiesAsync(url)
-                    .ConfigureAwait(false);
+            var models = _mappingService.MapCantonElectoralUnitParties(cantonElectoralUnitParties, request.Year, cantonCode);
 
-                var models = _mappingService.MapCantonElectoralUnitParties(cantonElectoralUnitParties, electionYear, cantonCode);
-
-                await _repository.StoreCantonElectoralUnitPartiesAsync(models).ConfigureAwait(false);
-            }
+            await _repository.StoreCantonElectoralUnitPartiesAsync(models).ConfigureAwait(false);
         }
     }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/election_cycle.dart';
 import '../services/admin_service.dart';
@@ -34,6 +35,11 @@ class _BootstrapBodyState extends State<_BootstrapBody> {
   int? _quickYear;
   List<ElectionCycle> _allCycles = [];
 
+  String? _jobId;
+  String? _importStatus;
+  String? _importError;
+  Timer? _pollingTimer;
+
   @override
   void initState() {
     super.initState();
@@ -42,32 +48,85 @@ class _BootstrapBodyState extends State<_BootstrapBody> {
     });
   }
 
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  bool _isTerminalStatus(String? status) =>
+      status == 'Completed' || status == 'Failed';
+
+  void _startPolling(String jobId) {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final result = await _service.getImportStatus(jobId);
+      if (!mounted) return;
+      final status = result?['status'] as String?;
+      final error = result?['errorMessage'] as String?;
+      setState(() {
+        _importStatus = status;
+        _importError = error;
+      });
+      if (_isTerminalStatus(status)) {
+        _pollingTimer?.cancel();
+        _pollingTimer = null;
+      }
+    });
+  }
+
   Future<void> _runImport() async {
     if (_quickYear == null) return;
-    setState(() => _loading['quickImport'] = true);
-    final error = await _service.importAll(_quickType, _quickYear!);
+    setState(() {
+      _loading['quickImport'] = true;
+      _jobId = null;
+      _importStatus = null;
+      _importError = null;
+    });
+
+    final result = await _service.importAll(_quickType, _quickYear!);
+
     if (!mounted) return;
-    setState(() => _loading['quickImport'] = false);
-    if (error == '__background__') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Uvoz je pokrenut u pozadini — provjeri dropdown za nekoliko minuta.'),
-        backgroundColor: Colors.blueGrey,
-        duration: Duration(seconds: 12),
-      ));
-    } else if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Uvoz uspješan.'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 5),
-      ));
+
+    // A valid jobId is a UUID: 36 chars with format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    final isJobId = result != null && RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(result);
+
+    setState(() {
+      _loading['quickImport'] = false;
+      if (isJobId) {
+        _jobId = result;
+        _importStatus = 'Queued';
+      }
+    });
+
+    if (isJobId) {
+      _startPolling(result!);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Greška: $error'),
+        content: Text('Greška: $result'),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 8),
       ));
     }
   }
+
+  Color _statusColor(String? status) => switch (status) {
+    'Queued' => Colors.grey,
+    'Running' => Colors.blue,
+    'Completed' => Colors.green,
+    'Failed' => Colors.red,
+    _ => Colors.grey,
+  };
+
+  String _statusLabel(String? status) => switch (status) {
+    'Queued' => 'Čeka...',
+    'Running' => 'U toku...',
+    'Completed' => 'Završeno',
+    'Failed' => 'Greška',
+    _ => '',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -144,10 +203,41 @@ class _BootstrapBodyState extends State<_BootstrapBody> {
                     : _runImport,
               ),
             ),
+            if (_jobId != null) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Chip(
+                    label: Text(
+                      _statusLabel(_importStatus),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: _statusColor(_importStatus),
+                  ),
+                  if (_importStatus == 'Running' || _importStatus == 'Queued')
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                ],
+              ),
+              if (_importError != null && _importError!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Greška: $_importError',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+            ],
           ],
         ),
       ),
     );
   }
-
 }

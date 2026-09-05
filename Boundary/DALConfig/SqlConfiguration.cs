@@ -36,5 +36,6 @@ public static class SqlConfiguration
         services.AddScoped<IForecastedResultRepository, ForecastedResultRepository>();
         services.AddScoped<ISavedSearchRepository, SavedSearchRepository>();
         services.AddScoped<IElectionCycleRepository, ElectionCycleRepository>();
+        services.AddScoped<IImportJobRepository, ImportJobRepository>();
     }
 }
