@@ -278,6 +278,14 @@ public class UserController(
         var user = await _mediator.Send(new GetUserByIdQuery(userId), cancellationToken);
         if (user is null) return NotFound();
 
+        if (!user.MustChangePassword)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Promjena lozinke nije obavezna za ovaj nalog. Koristite PUT /api/User/password."
+            });
+        }           
+
         var hashed = _passwordHasher.HashPassword(user, request.NewPassword);
         await _mediator.Send(new ForceChangePasswordCommand(userId, hashed), cancellationToken);
         return NoContent();
