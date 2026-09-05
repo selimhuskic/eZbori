@@ -6,7 +6,7 @@ public record ResetPasswordCommand(string Email, string Token, string HashedPass
 
 public record ResetPasswordResult(bool Success, string Message);
 
-internal sealed class ResetPasswordCommandHandler(IUserRepository userRepository)
+internal sealed class ResetPasswordCommandHandler(IUserRepository userRepository, IMediator mediator)
     : IRequestHandler<ResetPasswordCommand, ResetPasswordResult>
 {
     public async Task<ResetPasswordResult> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
@@ -25,6 +25,8 @@ internal sealed class ResetPasswordCommandHandler(IUserRepository userRepository
         await userRepository.ChangePasswordAsync(user.Id, request.HashedPassword);
         await userRepository.SetResetTokenAsync(request.Email, null, null);
         await userRepository.ClearMustChangePasswordAsync(user.Id);
+        await mediator.Send(new DAL.Commands.Notification.CreateNotificationCommand(
+            user.Id, "Lozinka resetovana", "Vaša lozinka je resetovana putem email koda."), cancellationToken);
 
         return new ResetPasswordResult(true, "Lozinka uspješno promijenjena.");
     }

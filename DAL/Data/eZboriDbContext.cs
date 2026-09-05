@@ -42,6 +42,7 @@ public class eZboriDbContext : DbContext
         modelBuilder.ApplyConfiguration(new ForecastedResultConfiguration());
         modelBuilder.ApplyConfiguration(new SavedSearchConfiguration());
         modelBuilder.ApplyConfiguration(new ElectionCycleConfiguration());
+        modelBuilder.ApplyConfiguration(new NotificationConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
@@ -78,4 +79,5 @@ public class eZboriDbContext : DbContext
     public DbSet<SavedSearch> SavedSearches { get; set; }
     public DbSet<ElectionCycle> ElectionCycles { get; set; }
     public DbSet<ImportJob> ImportJobs { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 }

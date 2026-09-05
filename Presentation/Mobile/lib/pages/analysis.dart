@@ -13,6 +13,7 @@ import '../services/analysis_service.dart';
 import '../services/saved_search_service.dart';
 import 'home.dart';
 import 'login.dart';
+import 'notifications.dart';
 import 'registration.dart';
 import 'saved_searches.dart';
 import 'recommendations.dart';
@@ -1085,6 +1086,15 @@ class _AnalysisState extends State<Analysis> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, SavedSearches.routeName);
+              },
+            ),
+          if (widget.loggedIn)
+            ListTile(
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text('Notifikacije'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, Notifications.routeName);
               },
             ),
           if (widget.loggedIn)

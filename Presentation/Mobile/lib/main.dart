@@ -7,6 +7,7 @@ import 'package:ezbori_mobile/pages/forgot_password.dart';
 import 'package:ezbori_mobile/pages/home.dart';
 import 'package:ezbori_mobile/pages/loading.dart';
 import 'package:ezbori_mobile/pages/login.dart';
+import 'package:ezbori_mobile/pages/notifications.dart';
 import 'package:ezbori_mobile/pages/profile.dart';
 import 'package:ezbori_mobile/pages/registration.dart';
 import 'package:ezbori_mobile/pages/reset_password_by_token.dart';
@@ -57,6 +58,7 @@ class EZboriApp extends StatelessWidget {
         ChangePasswordForced.routeName: (context) => const ChangePasswordForced(),
         SavedSearches.routeName: (context) => const SavedSearches(),
         Recommendations.routeName: (context) => const Recommendations(),
+        Notifications.routeName: (context) => const Notifications(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == Analysis.routeName) {

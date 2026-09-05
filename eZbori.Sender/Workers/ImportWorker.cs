@@ -117,6 +117,11 @@ public sealed class ImportWorker(
 
                     await importJobRepo.SetCompletedAsync(msg.JobId);
                     logger.LogInformation("Import job {JobId} completed", msg.JobId);
+
+                    var electionLabel = msg.ElectionType == (int)ElectionType.GeneralElection ? "Opći" : "Lokalni";
+                    await mediator.Send(new DAL.Commands.Notification.BroadcastNotificationCommand(
+                        "Novi rezultati dostupni",
+                        $"{electionLabel} izbori {msg.Year}. su sada dostupni za pregled."), stoppingToken);
                 }
                 catch (Exception ex)
                 {
