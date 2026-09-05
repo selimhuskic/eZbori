@@ -205,6 +205,17 @@ class AdminService {
     }
   }
 
+  Future<bool> forceChangePassword(String newPassword) async {
+    try {
+      final response = await ApiClient.dio.post('/User/force-change-password', data: {
+        'newPassword': newPassword,
+      });
+      return response.statusCode == 204;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> inviteUser({
     required String firstName,
     required String lastName,

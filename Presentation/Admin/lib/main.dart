@@ -8,6 +8,8 @@ import 'pages/election_cycles.dart';
 import 'pages/users.dart';
 import 'pages/invite_user.dart';
 import 'pages/municipalities.dart';
+import 'pages/force_change_password.dart';
+import 'services/api_client.dart';
 
 void main() {
   runApp(const ProviderScope(child: EZboriAdminApp()));
@@ -21,6 +23,7 @@ class EZboriAdminApp extends StatelessWidget {
     return MaterialApp(
       title: 'eZbori Admin',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
             seedColor: const Color.fromARGB(255, 45, 88, 166)),
@@ -36,6 +39,7 @@ class EZboriAdminApp extends StatelessWidget {
         Users.routeName: (context) => const Users(),
         InviteUser.routeName: (context) => const InviteUser(),
         Municipalities.routeName: (context) => const Municipalities(),
+        ForceChangePassword.routeName: (context) => const ForceChangePassword(),
       },
     );
   }

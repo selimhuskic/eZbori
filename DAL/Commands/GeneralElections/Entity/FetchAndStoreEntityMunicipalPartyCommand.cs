@@ -1,5 +1,4 @@
 using Application.Services;
-using Application.Services;
 using External.CentralElectionCommiteeHttpClients;
 using MediatR;
 

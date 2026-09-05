@@ -98,7 +98,7 @@ public class UserController(
         }
 
         var newAccessToken = _tokenProvider.GenerateJwtToken(user);
-        var newRefreshToken = _tokenProvider.GenerateRefreshToken(user);
+        var newRefreshToken = await _tokenProvider.GenerateRefreshToken(user);
 
         return Ok(new
         {

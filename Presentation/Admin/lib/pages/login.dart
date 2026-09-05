@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_client.dart';
 import 'dashboard.dart';
+import 'force_change_password.dart';
 import 'unauthorized.dart';
 
 class Login extends StatefulWidget {
@@ -58,6 +59,17 @@ class _LoginState extends State<Login> {
         await storage.write(key: 'admin_accessToken', value: accessToken);
         await storage.write(
             key: 'admin_refreshToken', value: refreshToken ?? '');
+
+        if (!mounted) return;
+
+        final mustChangePassword =
+            response.data['mustChangePassword'] as bool? ?? false;
+
+        if (mustChangePassword) {
+          Navigator.pushReplacementNamed(
+              context, ForceChangePassword.routeName);
+          return;
+        }
 
         final role = ApiClient.getRoleFromToken(accessToken);
 

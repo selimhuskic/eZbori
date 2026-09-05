@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 abstract class ApiClient {
   static const String baseUrl = String.fromEnvironment(
@@ -35,6 +38,9 @@ abstract class ApiClient {
               requestOptions.headers['Authorization'] = 'Bearer $newToken';
               final response = await dio.fetch(requestOptions);
               return handler.resolve(response);
+            } else {
+              navigatorKey.currentState
+                  ?.pushNamedAndRemoveUntil('/', (route) => false);
             }
           }
           handler.next(e);
