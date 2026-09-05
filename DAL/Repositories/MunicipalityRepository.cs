@@ -17,15 +17,13 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
             .FirstOrDefaultAsync(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
 
         if (councilOverview == null)
-            throw new InvalidOperationException($"No council overview found for municipality {municipalityCode}, year {electionYear}.");
+            throw new UserException($"Ne postoji pregled općinskog vijeća za općinu {municipalityCode}, godina {electionYear}.");
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 
-        var validVotes = councilOverview.TotalVotes - (int)councilOverview.InvalidBlankBallots;
-
         return new TableOverviewReadModel(municipality.Name, electionYear, municipality.Entity.ToString(),
             councilOverview.NumberOfVoters, councilOverview.TotalVotes,
-            null, councilOverview.PercentageTotalVotes, councilOverview.InvalidBlankBallots, validVotes);
+            null, councilOverview.PercentageTotalVotes, councilOverview.InvalidBlankBallots, councilOverview.ProcessedInvalidOthersBallots);
     }
 
     public async Task StoreMunicipalityCandidateDetailsAsync(IEnumerable<MunicipalityCandidateDetails> models)
@@ -65,9 +63,8 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
 
         var municipalityCandidateOverview = municipalityCandidateOverviews.FirstOrDefault(x => x.MunicipalityCode == municipality.Id);
 
-        //TODO fix
         if (municipalityCandidateOverview == null)
-            throw new Exception();
+            throw new UserException($"Ne postoji pregled kandidata za općinu {municipalityCode}, godina {electionYear}.");
 
         return new TableOverviewReadModel(municipality.Name,
             electionYear,
@@ -114,15 +111,8 @@ public class MunicipalityRepository(eZboriDbContext dboContext) : IMunicipalityR
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
 
-        try
-        {
-            return new TableCandidateReadModel(municipality.Name, null, municipalityCouncilParties.Sum(x => x.TotalVotes),
-           electionYear, municipalityCouncilParties.ToDictionary(y => y.Name, z => z.TotalVotes));
-        }
-        catch (Exception e)
-        {
-            throw;
-        }
+        return new TableCandidateReadModel(municipality.Name, null, municipalityCouncilParties.Sum(x => x.TotalVotes),
+            electionYear, municipalityCouncilParties.ToDictionary(y => y.Name, z => z.TotalVotes));
     }
 
     public async Task<IEnumerable<int>> GetElectionYears()

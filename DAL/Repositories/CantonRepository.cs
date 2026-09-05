@@ -31,11 +31,11 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
 
     public Task<TableCandidateReadModel> GetCantonElectoralUnitPartiesAsync(int electionYear, CantonParliamentElectoralUnit electoralUnit)
     {
-        var stateElectoralUnitParties = _dbContext.EntityElectoralUnitParty
-            .Where(x => electionYear == x.ElectionYear);
+        var cantonElectoralUnitParties = _dbContext.CantonElectoralUnitParties
+            .Where(x => electionYear == x.ElectionYear && x.CantonElectoralUnitCode == (int)electoralUnit);
 
-        return Task.FromResult(new TableCandidateReadModel(electoralUnit.ToString(), null, stateElectoralUnitParties.Sum(x => x.TotalVotes),
-            electionYear, stateElectoralUnitParties.ToDictionary(y => y.PartyName, z => z.TotalVotes)));
+        return Task.FromResult(new TableCandidateReadModel(electoralUnit.ToString(), null, cantonElectoralUnitParties.Sum(x => x.TotalVotes),
+            electionYear, cantonElectoralUnitParties.ToDictionary(y => y.Name, z => z.TotalVotes)));
     }
 
     public async Task StoreCantonMunicipalOverviewAsync(CantonMunicipalOverview model)
@@ -47,7 +47,7 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
 
     public async Task<TableOverviewReadModel> GetCantonMunicipalOverviewsAsync(int electionYear, int municipalityCode)
     {
-        var cantonMunicipalOverview = await _dbContext.EntityMunicipalOverview
+        var cantonMunicipalOverview = await _dbContext.CantonMunicipalOverview
             .FirstAsync(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);
@@ -66,7 +66,7 @@ public class CantonRepository(eZboriDbContext dboContext) : ICantonRepository
 
     public async Task<TableCandidateReadModel> GetCantonMunicipalPartiesAsync(int electionYear, int municipalityCode)
     {
-        var cantonMunicipalPartyResult = _dbContext.EntityMunicipalParty
+        var cantonMunicipalPartyResult = _dbContext.CantonMunicipalParties
             .Where(x => electionYear == x.ElectionYear && municipalityCode == x.MunicipalityCode);
 
         var municipality = await _dbContext.Municipalities.FirstAsync(x => municipalityCode == x.Id);

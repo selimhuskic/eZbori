@@ -51,7 +51,7 @@ public class MunicipalityServiceRepository(eZboriDbContext dboContext) : IMunici
             .First(x => x.Id == municipalityCode);
 
         if (municipality.CantonParliamentElectoralUnit == null)
-            throw new Exception(); //TODO elaborate
+            throw new UserException($"Općina {municipalityCode} nema definiranu kantonalnu izbornu jedinicu.");
 
         return (int)municipality.CantonParliamentElectoralUnit;
     }
