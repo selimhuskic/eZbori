@@ -1,3 +1,4 @@
+using Application.DTOs;
 using DAL.Commands.ElectionCycle;
 using DAL.Queries.ElectionCycle;
 
@@ -17,8 +18,15 @@ public class ElectionCycleController(IMediator mediator) : BaseEZboriController(
 
     [HttpPost]
     public async Task<ActionResult<ElectionCycle>> Create(
-        [FromBody] ElectionCycle cycle, CancellationToken cancellationToken)
+        [FromBody] CreateElectionCycleRequest request, CancellationToken cancellationToken)
     {
+        var cycle = new ElectionCycle
+        {
+            Year = request.Year,
+            ElectionType = request.ElectionType,
+            ApiBaseUrl = request.ApiBaseUrl,
+            ResultKey = request.ResultKey,
+        };
         var created = await _mediator.Send(new CreateElectionCycleCommand(cycle), cancellationToken);
         return CreatedAtAction(nameof(GetAll), created);
     }

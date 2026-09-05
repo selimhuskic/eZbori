@@ -8,10 +8,12 @@ public class SavedSearchRepository(eZboriDbContext dbContext) : ISavedSearchRepo
 {
     private readonly eZboriDbContext _context = dbContext;
 
-    public async Task<IEnumerable<SavedSearch>> GetByUserAsync(int userId)
+    public async Task<IEnumerable<SavedSearchReadModel>> GetByUserAsync(int userId)
         => await _context.SavedSearches
             .Where(s => s.UserId == userId && !s.IsDeleted)
             .OrderByDescending(s => s.CreatedAt)
+            .Select(s => new SavedSearchReadModel(s.Id, s.ElectionType, s.ElectionYear,
+                s.AnalysisSubject, s.ElectoralUnit, s.MunicipalityCode, s.CreatedAt))
             .ToListAsync();
 
     public async Task<IEnumerable<SavedSearch>> GetByUserIncludingDeletedAsync(int userId)

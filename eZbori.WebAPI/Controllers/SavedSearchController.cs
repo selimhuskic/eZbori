@@ -1,3 +1,4 @@
+using Application.DTOs;
 using DAL.Commands.SavedSearch;
 using DAL.Queries.SavedSearch;
 using System.Security.Claims;
@@ -10,7 +11,7 @@ namespace eZbori.Web.Controllers;
 public class SavedSearchController(IMediator mediator) : BaseEZboriController(mediator)
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Application.Models.SavedSearch>>> GetMine(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<SavedSearchReadModel>>> GetMine(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
@@ -20,15 +21,25 @@ public class SavedSearchController(IMediator mediator) : BaseEZboriController(me
     }
 
     [HttpPost]
-    public async Task<ActionResult<Application.Models.SavedSearch>> Create(
-        [FromBody] Application.Models.SavedSearch search, CancellationToken cancellationToken)
+    public async Task<ActionResult<SavedSearchReadModel>> Create(
+        [FromBody] CreateSavedSearchRequest request, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        search.UserId = userId.Value;
+        var search = new Application.Models.SavedSearch
+        {
+            UserId = userId.Value,
+            ElectionType = request.ElectionType,
+            ElectionYear = request.ElectionYear,
+            AnalysisSubject = request.AnalysisSubject,
+            ElectoralUnit = request.ElectoralUnit,
+            MunicipalityCode = request.MunicipalityCode,
+        };
         var created = await _mediator.Send(new CreateSavedSearchCommand(search), cancellationToken);
-        return CreatedAtAction(nameof(GetMine), created);
+        var response = new SavedSearchReadModel(created.Id, created.ElectionType, created.ElectionYear,
+            created.AnalysisSubject, created.ElectoralUnit, created.MunicipalityCode, created.CreatedAt);
+        return CreatedAtAction(nameof(GetMine), response);
     }
 
     [HttpDelete("{id:int}")]
