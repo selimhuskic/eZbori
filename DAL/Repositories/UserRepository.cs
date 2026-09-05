@@ -49,6 +49,14 @@ public class UserRepository(eZboriDbContext dboContext)
     {
         var user = await _dbContext.Users.FindAsync(userId)
             ?? throw new UserException("Korisnik nije pronađen.");
+
+        if (email is not null && await _dbContext.Users.AnyAsync(u => u.Email == email && u.Id != userId))
+            throw new UserException("Email adresa je već zauzeta.");
+
+        if (municipalityId.HasValue && !clearMunicipality &&
+            !await _dbContext.Municipalities.AnyAsync(m => m.Id == municipalityId))
+            throw new UserException($"Općina sa šifrom {municipalityId} ne postoji.");
+
         user.ApplyProfileUpdate(email, firstName, lastName, dateOfBirth,
             municipalityId, clearMunicipality, profileImageBase64);
         await _dbContext.SaveChangesAsync();

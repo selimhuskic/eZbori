@@ -1,7 +1,6 @@
 ﻿using Application.Constants;
-using Application.Requests;
-using DAL.Commands.User;
 using DAL.Queries;
+using DAL.Validation;
 using eZbori.Web.Security;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
@@ -114,10 +113,7 @@ public class UserController(
     [HttpPut("{id:int}/role")]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateRoleRequest request, CancellationToken cancellationToken)
     {
-        if (!Enum.IsDefined(typeof(Application.Enum.UserRole), request.RoleId))
-        {
-            return BadRequest(new { message = "Nepoznata korisnička uloga." });
-        }            
+        InputValidator.EnsureDefinedEnum<Application.Enum.UserRole>(request.RoleId, "RoleId");
 
         await _mediator.Send(new UpdateUserRoleCommand(id, request.RoleId), cancellationToken);
         return NoContent();
@@ -158,6 +154,9 @@ public class UserController(
     [HttpPost("invite")]
     public async Task<IActionResult> InviteUser([FromBody] InviteUserRequest request, CancellationToken cancellationToken)
     {
+        InputValidator.EnsureValidEmail(request.Email);
+        InputValidator.EnsureDefinedEnum<Application.Enum.UserRole>(request.RoleId, "RoleId");
+
         await _mediator.Send(new InviteUserCommand(
             request.FirstName, request.LastName, request.Email, request.RoleId, request.Message),
             cancellationToken);
@@ -183,6 +182,8 @@ public class UserController(
         var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
         if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out int userId))
             return BadRequest("Invalid user ID");
+        if (request.Email is not null)
+            InputValidator.EnsureValidEmail(request.Email);
         await _mediator.Send(new UpdateUserProfileCommand(
             userId, request.Email, request.FirstName, request.LastName,
             request.DateOfBirth, request.MunicipalityId,
@@ -200,31 +201,38 @@ public class UserController(
             return BadRequest();
         }
 
+        InputValidator.EnsureValidEmail(registerRequest.Email);
+        InputValidator.EnsureValidPassword(registerRequest.Password);
+        var dateOfBirth = InputValidator.EnsureValidDateOfBirth(registerRequest.DateOfBirth);
+
         var existingUser = await _mediator.Send(
-            new GetUserQuery(registerRequest.Email, registerRequest.Username), 
+            new GetUserQuery(registerRequest.Email, registerRequest.Username),
             cancellationToken);
 
         if (existingUser is not null)
         {
+            var message = existingUser.Email == registerRequest.Email
+                ? "Email adresa je već zauzeta."
+                : "Korisničko ime je već zauzeto.";
             return Conflict(new
             {
                 error = Errors.UserAlreadyExists,
-                message = "A user with this email already exists."
+                message
             });
         }
 
         var newUser = new User
         {
             Email = registerRequest.Email,
-            DateOfBirth = DateTime.Parse(registerRequest.DateOfBirth),
+            DateOfBirth = dateOfBirth,
             FirstName = registerRequest.FirstName,
             LastName = registerRequest.LastName,
-            CreatedAt = DateTime.UtcNow, 
+            CreatedAt = DateTime.UtcNow,
             UserName = registerRequest.Username,
             UserRole = (int)Application.Enum.UserRole.User,
             Password = registerRequest.Password,
             UserVerified = false
-        };        
+        };
 
         await _mediator.Send(
             new CreateNewUserCommand(
@@ -256,6 +264,8 @@ public class UserController(
         {
             return Unauthorized(new { message = "Pogrešna trenutna lozinka." });
         }
+
+        InputValidator.EnsureValidPassword(request.NewPassword);
 
         var hashed = _passwordHasher.HashPassword(user, request.NewPassword);
         await _mediator.Send(new ChangePasswordCommand(userId, hashed), cancellationToken);
@@ -306,6 +316,7 @@ public class UserController(
     {
         var user = await _mediator.Send(new GetUserQuery(request.Email, request.Email), cancellationToken);
         if (user is null) return NotFound();
+        InputValidator.EnsureValidPassword(request.NewPassword);
         var hashed = _passwordHasher.HashPassword(user, request.NewPassword);
         var result = await _mediator.Send(new ResetPasswordCommand(request.Email, request.Token, hashed), cancellationToken);
         return result.Success

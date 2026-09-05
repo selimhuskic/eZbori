@@ -1,6 +1,8 @@
 using Application.DTOs;
+using Application.Enum;
 using DAL.Commands.Municipality;
 using DAL.Queries;
+using DAL.Validation;
 
 namespace eZbori.Web.Controllers;
 
@@ -16,6 +18,13 @@ public class MunicipalityManagementController(IMediator mediator) : BaseEZboriCo
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMunicipalityRequest request, CancellationToken cancellationToken)
     {
+        InputValidator.EnsureDefinedEnum<Entity>((int)request.Entity, "Entity");
+        InputValidator.EnsureDefinedEnum<StateParliamentElectoralUnit>((int)request.StateParliamentElectoralUnit, "StateParliamentElectoralUnit");
+        InputValidator.EnsureDefinedEnum<EntityParliamentElectoralUnit>((int)request.EntityParliamentElectoralUnit, "EntityParliamentElectoralUnit");
+        
+        if (request.CantonParliamentElectoralUnit is not null)
+            InputValidator.EnsureDefinedEnum<CantonParliamentElectoralUnit>((int)request.CantonParliamentElectoralUnit, "CantonParliamentElectoralUnit");
+
         var municipality = new Municipality
         {
             Id = request.Id,

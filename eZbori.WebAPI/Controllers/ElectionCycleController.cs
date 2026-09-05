@@ -1,6 +1,5 @@
-using Application.Models;
-using DAL.Commands.ElectionCycles;
-using DAL.Queries.ElectionCycles;
+using DAL.Commands.ElectionCycle;
+using DAL.Queries.ElectionCycle;
 
 namespace eZbori.Web.Controllers;
 

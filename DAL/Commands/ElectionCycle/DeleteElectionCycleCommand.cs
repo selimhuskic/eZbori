@@ -1,7 +1,7 @@
 using Application.Repositories;
 using MediatR;
 
-namespace DAL.Commands.ElectionCycles;
+namespace DAL.Commands.ElectionCycle;
 
 public record DeleteElectionCycleCommand(int Id) : IRequest;
 

@@ -1,14 +1,16 @@
-using Application.Models;
-using Application.Repositories;
+using DAL.Validation;
 using MediatR;
 
-namespace DAL.Commands.ElectionCycles;
+namespace DAL.Commands.ElectionCycle;
 
-public record UpdateElectionCycleCommand(int Id, ElectionCycle Cycle) : IRequest;
+public record UpdateElectionCycleCommand(int Id, Application.Models.ElectionCycle Cycle) : IRequest;
 
 internal sealed class UpdateElectionCycleCommandHandler(IElectionCycleRepository repository)
     : IRequestHandler<UpdateElectionCycleCommand>
 {
-    public Task Handle(UpdateElectionCycleCommand request, CancellationToken cancellationToken)
-        => repository.UpdateAsync(request.Id, request.Cycle);
+    public async Task Handle(UpdateElectionCycleCommand request, CancellationToken cancellationToken)
+    {
+        await ElectionCycleValidator.ValidateAsync(request.Cycle);
+        await repository.UpdateAsync(request.Id, request.Cycle);
+    }
 }
