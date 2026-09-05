@@ -7,8 +7,7 @@ import 'api_client.dart';
 class LoginResult {
   final String status; // 'ok', 'password_required', 'failed'
   final String? email;
-  final bool mustChangePassword;
-  const LoginResult({required this.status, this.email, this.mustChangePassword = false});
+  const LoginResult({required this.status, this.email});
 }
 
 class UserService extends ApiClient {
@@ -38,22 +37,10 @@ class UserService extends ApiClient {
       await _storage.write(
           key: 'refreshToken', value: response.data['refreshToken']);
 
-      final mustChange = response.data['mustChangePassword'] as bool? ?? false;
-      return LoginResult(status: 'ok', mustChangePassword: mustChange);
+      return const LoginResult(status: 'ok');
     }
 
     return const LoginResult(status: 'failed');
-  }
-
-  Future<bool> setPassword(String email, String newPassword) async {
-    final response = await ApiClient.dio.post(
-      '/User/setpassword',
-      data: {
-        'email': email,
-        'newPassword': newPassword,
-      },
-    );
-    return response.statusCode == 200;
   }
 
   Future<BaseResponse> register(RegisterRequest request) async {
@@ -128,17 +115,6 @@ class UserService extends ApiClient {
         'newPassword': newPassword,
       });
       return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> forceChangePassword(String newPassword) async {
-    try {
-      final response = await ApiClient.dio.post('/User/force-change-password', data: {
-        'newPassword': newPassword,
-      });
-      return response.statusCode == 204;
     } catch (_) {
       return false;
     }

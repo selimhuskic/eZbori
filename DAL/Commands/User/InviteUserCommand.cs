@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Application.Services;
 using MediatR;
-using Microsoft.AspNetCore.Identity;
 
 namespace DAL.Commands.User;
 
@@ -14,19 +13,13 @@ public record InviteUserCommand(
 
 internal sealed class InviteUserCommandHandler(
     IUserRepository userRepository,
-    IUserInviteQueue inviteQueue,
-    IPasswordHasher<Application.Models.User> passwordHasher) : IRequestHandler<InviteUserCommand>
+    IUserInviteQueue inviteQueue) : IRequestHandler<InviteUserCommand>
 {
-    private static readonly char[] PasswordChars =
-        "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789".ToCharArray();
-
     public async Task Handle(InviteUserCommand request, CancellationToken cancellationToken)
     {
         var existingUser = await userRepository.GetUserAsync(request.Email, request.Email);
         if (existingUser is not null)
-            throw new UserException("Korisnik s ovom email adresom već postoji.");
-
-        var tempPassword = GenerateTempPassword(10);
+            throw new UserException("Korisnik s ovom email adresom već postoji. Koristite opciju za ponovno slanje pozivnice.");
 
         var newUser = new Application.Models.User
         {
@@ -38,23 +31,18 @@ internal sealed class InviteUserCommandHandler(
             CreatedAt = DateTime.UtcNow,
             UserRole = request.RoleId,
             Password = string.Empty,
-            UserVerified = true,
-            MustChangePassword = true,
+            UserVerified = false,
         };
-        newUser = newUser.WithHashedPassword(passwordHasher.HashPassword(newUser, tempPassword));
         await userRepository.CreatNewUserAsync(newUser);
+
+        var otp = Convert.ToHexString(RandomNumberGenerator.GetBytes(4));
+        await userRepository.SetResetTokenAsync(request.Email, otp, DateTime.UtcNow.AddMinutes(30));
 
         await inviteQueue.PublishAsync(new UserInviteMessage(
             request.FirstName,
             request.LastName,
             request.Email,
             request.Message,
-            tempPassword));
-    }
-
-    private static string GenerateTempPassword(int length)
-    {
-        var bytes = RandomNumberGenerator.GetBytes(length);
-        return new string(bytes.Select(b => PasswordChars[b % PasswordChars.Length]).ToArray());
+            otp));
     }
 }

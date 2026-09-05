@@ -8,7 +8,6 @@ import 'pages/election_cycles.dart';
 import 'pages/users.dart';
 import 'pages/invite_user.dart';
 import 'pages/municipalities.dart';
-import 'pages/force_change_password.dart';
 import 'pages/send_notification.dart';
 import 'services/api_client.dart';
 
@@ -40,7 +39,6 @@ class EZboriAdminApp extends StatelessWidget {
         Users.routeName: (context) => const Users(),
         InviteUser.routeName: (context) => const InviteUser(),
         Municipalities.routeName: (context) => const Municipalities(),
-        ForceChangePassword.routeName: (context) => const ForceChangePassword(),
         SendNotification.routeName: (context) => const SendNotification(),
       },
     );

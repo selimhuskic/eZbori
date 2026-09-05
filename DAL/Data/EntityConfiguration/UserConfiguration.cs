@@ -27,6 +27,5 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnType("nvarchar(max)").IsRequired(false);
         builder.Property(x => x.PasswordResetToken).HasMaxLength(16).IsRequired(false);
         builder.Property(x => x.PasswordResetTokenExpiry).IsRequired(false);
-        builder.Property(x => x.MustChangePassword).HasColumnType("bit").IsRequired();
     }
 }

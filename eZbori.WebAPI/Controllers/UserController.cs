@@ -48,8 +48,7 @@ public class UserController(
         {
             status = "ok",
             accessToken,
-            refreshToken,
-            mustChangePassword = user.MustChangePassword
+            refreshToken
         });
     }
 
@@ -163,19 +162,6 @@ public class UserController(
             request.FirstName, request.LastName, request.Email, request.RoleId, request.Message),
             cancellationToken);
         return Ok(new { message = "Korisnik uspješno pozvan." });
-    }
-
-    [AllowAnonymous]
-    [HttpPost("setpassword")]
-    public async Task<IActionResult> SetPassword([FromBody] SetPasswordRequest request, CancellationToken cancellationToken)
-    {
-        var user = await _mediator.Send(new GetUserQuery(request.Email, request.Email), cancellationToken);
-        if (user is null || !string.IsNullOrEmpty(user.Password))
-            return BadRequest(new { message = "Zahtjev nije validan." });
-
-        var hashed = _passwordHasher.HashPassword(user, request.NewPassword);
-        await _mediator.Send(new SetPasswordCommand(request.Email, hashed), cancellationToken);
-        return Ok(new { message = "Lozinka uspješno postavljena." });
     }
 
     [Authorize]
@@ -298,28 +284,11 @@ public class UserController(
         return NoContent();
     }
 
-    [Authorize]
-    [HttpPost("force-change-password")]
-    public async Task<IActionResult> ForceChangePassword(
-        [FromBody] ForceChangePasswordRequest request, CancellationToken cancellationToken)
+    [Authorize(Roles = "Administrator")]
+    [HttpPost("{id:int}/resend-invitation")]
+    public async Task<IActionResult> ResendInvitation(int id, CancellationToken cancellationToken)
     {
-        var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out int userId))
-            return BadRequest("Invalid user ID");
-
-        var user = await _mediator.Send(new GetUserByIdQuery(userId), cancellationToken);
-        if (user is null) return NotFound();
-
-        if (!user.MustChangePassword)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new
-            {
-                message = "Promjena lozinke nije obavezna za ovaj nalog. Koristite PUT /api/User/password."
-            });
-        }           
-
-        var hashed = _passwordHasher.HashPassword(user, request.NewPassword);
-        await _mediator.Send(new ForceChangePasswordCommand(userId, hashed), cancellationToken);
+        await _mediator.Send(new ResendInvitationCommand(id), cancellationToken);
         return NoContent();
     }
 

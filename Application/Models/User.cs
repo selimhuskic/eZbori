@@ -18,7 +18,6 @@ public record User
     public string? ProfileImageBase64 { get; set; }
     public string? PasswordResetToken { get; set; }
     public DateTime? PasswordResetTokenExpiry { get; set; }
-    public bool MustChangePassword { get; set; }
 
     public void ApplyProfileUpdate(string? email, string? firstName, string? lastName,
         DateTime? dateOfBirth, int? municipalityId, bool clearMunicipality,

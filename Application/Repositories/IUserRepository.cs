@@ -9,7 +9,6 @@ public interface IUserRepository : IGenericRepository<User>
     Task<User> CreatNewUserAsync(User user);
     Task UpdateRoleAsync(int userId, int roleId);
     Task DeleteAsync(int userId);
-    Task SetPasswordAsync(string email, string hashedPassword);
     Task<User?> GetProfileAsync(int userId);
     Task UpdateProfileAsync(int userId, string? email, string? firstName, string? lastName,
         DateTime? dateOfBirth, int? municipalityId, bool clearMunicipality,
@@ -17,5 +16,5 @@ public interface IUserRepository : IGenericRepository<User>
     Task<User?> GetUserByIdAsync(int userId);
     Task ChangePasswordAsync(int userId, string hashedPassword);
     Task SetResetTokenAsync(string email, string? token, DateTime? expiry);
-    Task ClearMustChangePasswordAsync(int userId);
+    Task ConfirmUserAsync(int userId);
 }

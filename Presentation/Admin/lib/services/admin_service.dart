@@ -218,11 +218,9 @@ class AdminService {
     }
   }
 
-  Future<bool> forceChangePassword(String newPassword) async {
+  Future<bool> resendInvitation(int userId) async {
     try {
-      final response = await ApiClient.dio.post('/User/force-change-password', data: {
-        'newPassword': newPassword,
-      });
+      final response = await ApiClient.dio.post('/User/$userId/resend-invitation');
       return response.statusCode == 204;
     } catch (_) {
       return false;

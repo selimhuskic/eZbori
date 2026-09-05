@@ -73,8 +73,8 @@ public sealed class InviteEmailWorker(IConfiguration configuration, ILogger<Invi
                             <p>Pozvani ste na platformu <strong>eZbori</strong>.</p>
                             {customPart}
                             <p>Prijavite se koristeći svoju email adresu kao korisničko ime.</p>
-                            <p>Vaša privremena lozinka je: <strong>{payload.TempPassword}</strong></p>
-                            <p>Bit ćete preusmjereni na promjenu lozinke pri prvoj prijavi.</p>
+                            <p>Vaš jednokratni kod za potvrdu naloga je: <strong>{payload.OtpCode}</strong></p>
+                            <p>Unesite ovaj kod prilikom prve prijave da biste postavili svoju lozinku.</p>
                             """;
 
                         await EmailSender.SendAsync(configuration, payload.Email,
@@ -107,5 +107,5 @@ public sealed class InviteEmailWorker(IConfiguration configuration, ILogger<Invi
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    private record InvitePayload(string FirstName, string LastName, string Email, string? CustomMessage, string? TempPassword);
+    private record InvitePayload(string FirstName, string LastName, string Email, string? CustomMessage, string? OtpCode);
 }

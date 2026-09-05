@@ -2,8 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:ezbori_mobile/pages/analysis.dart';
-import 'package:ezbori_mobile/pages/change_password_forced.dart';
-import 'package:ezbori_mobile/pages/set_password.dart';
+import 'package:ezbori_mobile/pages/reset_password_by_token.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/user_Service.dart';
@@ -66,20 +65,13 @@ class _LoginState extends State<Login> {
     if (result.status == 'password_required') {
       Navigator.pushNamed(
         context,
-        SetPassword.routeName,
+        ResetPasswordByToken.routeName,
         arguments: result.email ?? _usernameController.text,
       );
       return;
     }
 
     if (result.status == 'ok') {
-      if (result.mustChangePassword) {
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-            context, ChangePasswordForced.routeName, (_) => false);
-        return;
-      }
-
       String? role;
       try {
         const storage = FlutterSecureStorage();

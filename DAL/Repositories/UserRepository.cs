@@ -38,17 +38,6 @@ public class UserRepository(eZboriDbContext dboContext)
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task SetPasswordAsync(string email, string hashedPassword)
-    {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email)
-            ?? throw new UserException("Korisnik nije pronađen.");
-        if (!string.IsNullOrEmpty(user.Password))
-            throw new UserException("Lozinka je već postavljena.");
-        user.Password = hashedPassword;
-        user.UserVerified = true;
-        await _dbContext.SaveChangesAsync();
-    }
-
     public async Task<User?> GetProfileAsync(int userId)
         => await _dbContext.Users
             .Include(u => u.MunicipalityNavigation)
@@ -85,11 +74,11 @@ public class UserRepository(eZboriDbContext dboContext)
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task ClearMustChangePasswordAsync(int userId)
+    public async Task ConfirmUserAsync(int userId)
     {
         var user = await _dbContext.Users.FindAsync(userId)
             ?? throw new UserException("Korisnik nije pronađen.");
-        user.MustChangePassword = false;
+        user.UserVerified = true;
         await _dbContext.SaveChangesAsync();
     }
 }

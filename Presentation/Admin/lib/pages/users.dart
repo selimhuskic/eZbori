@@ -134,6 +134,17 @@ class _UsersState extends State<Users> {
     }
   }
 
+  Future<void> _resendInvitation(AdminUser user) async {
+    final ok = await _service.resendInvitation(user.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? 'Pozivnica ponovo poslana na ${user.email}.'
+          : 'Greška pri ponovnom slanju pozivnice.'),
+      backgroundColor: ok ? Colors.green : Colors.red,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,6 +241,13 @@ class _UsersState extends State<Users> {
                                   fontSize: 11, color: Colors.orange)),
                       ],
                     ),
+                    if (!user.userVerified)
+                      IconButton(
+                        icon: const Icon(Icons.forward_to_inbox,
+                            color: Color.fromARGB(255, 45, 88, 166)),
+                        tooltip: 'Ponovo pošalji pozivnicu',
+                        onPressed: () => _resendInvitation(user),
+                      ),
                     IconButton(
                       icon: const Icon(Icons.swap_horiz,
                           color: Color.fromARGB(255, 45, 88, 166)),

@@ -18,8 +18,6 @@ public record RegisterRequest(
 
 public record UpdateRoleRequest(int RoleId);
 
-public record SetPasswordRequest(string Email, string NewPassword);
-
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 public record InviteUserRequest(
@@ -52,8 +50,6 @@ public record UpdateUserProfileRequest(
 public record ForgotPasswordRequest(string Email);
 
 public record ResetPasswordRequest(string Email, string Token, string NewPassword);
-
-public record ForceChangePasswordRequest(string NewPassword);
 
 public record AdminUserDto(int Id, string Email, string UserName, string FirstName, string LastName, bool UserVerified, int UserRole);
 
