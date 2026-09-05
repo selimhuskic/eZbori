@@ -61,7 +61,11 @@ public class UserController(
         CancellationToken cancellationToken = default)
     {
         var all = (await _mediator.Send(new GetAllUsersQuery(), cancellationToken)).ToList();
-        var items = all.Skip((page - 1) * pageSize).Take(pageSize);
+        var items = all
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(u => new AdminUserDto(u.Id, u.Email, u.UserName, u.FirstName, u.LastName, u.UserVerified, u.UserRole));
+        
         return Ok(new { items, total = all.Count, page, pageSize });
     }
 
@@ -111,6 +115,11 @@ public class UserController(
     [HttpPut("{id:int}/role")]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateRoleRequest request, CancellationToken cancellationToken)
     {
+        if (!Enum.IsDefined(typeof(Application.Enum.UserRole), request.RoleId))
+        {
+            return BadRequest(new { message = "Nepoznata korisnička uloga." });
+        }            
+
         await _mediator.Send(new UpdateUserRoleCommand(id, request.RoleId), cancellationToken);
         return NoContent();
     }
@@ -119,6 +128,21 @@ public class UserController(
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteUser(int id, CancellationToken cancellationToken)
     {
+        var user = await _mediator.Send(new GetUserByIdQuery(id), cancellationToken);
+
+        if (user is null) 
+        {
+            return NotFound();
+        }
+
+        if (user.UserRole == (int)Application.Enum.UserRole.Administrator)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Brisanje administratorskog naloga nije dozvoljeno."
+            });
+        }            
+
         await _mediator.Send(new DeleteUserCommand(id), cancellationToken);
         return NoContent();
     }
