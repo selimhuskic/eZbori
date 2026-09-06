@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
+import '../models/faq_item.dart';
+import '../services/faq_service.dart';
 
-class FAQ extends StatelessWidget {
+class FAQ extends StatefulWidget {
   static const String routeName = "/faq";
 
   const FAQ({super.key});
+
+  @override
+  State<FAQ> createState() => _FAQState();
+}
+
+class _FAQState extends State<FAQ> {
+  final _service = FaqService();
+  bool _loading = true;
+  List<FaqItem> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final items = await _service.getFaqs();
+    if (!mounted) return;
+    setState(() {
+      _items = items;
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,48 +39,19 @@ class FAQ extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 45, 88, 166),
         foregroundColor: Colors.white,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          _FaqItem(
-            question: 'Što je eZbori?',
-            answer:
-                'eZbori je platforma za pregled i analizu rezultata izbora u Bosni i Hercegovini. '
-                'Omogućuje uvid u izborne rezultate na svim razinama vlasti — od predsjedništva do općinskih vijeća.',
-          ),
-          _FaqItem(
-            question: 'Koji su izbori dostupni?',
-            answer:
-                'Dostupni su opšti izbori (predsjedništvo, Parlamentarna skupština, '
-                'entitetski parlamenti i kantoni) te lokalni izbori (općinska vijeća i načelnici) '
-                'za sve dostupne izborne godine.',
-          ),
-          _FaqItem(
-            question: 'Da li trebam račun za pregled podataka?',
-            answer:
-                'Osnovni pregled rezultata dostupan je i bez registracije. '
-                'Registracijom dobivate pristup naprednim analizama i usporednim pregledima.',
-          ),
-          _FaqItem(
-            question: 'Odakle dolaze podaci?',
-            answer:
-                'Podaci se preuzimaju iz službenih izvora Centralne izborne komisije '
-                'Bosne i Hercegovine (CIK BiH) i redovito se ažuriraju.',
-          ),
-          _FaqItem(
-            question: 'Kako se tumači izlaznost?',
-            answer:
-                'Izlaznost je postotak registriranih birača koji su glasali na izborima. '
-                'Na primjer, izlaznost od 52 % znači da je glasalo 52 od 100 registriranih birača.',
-          ),
-          _FaqItem(
-            question: 'Kako mogu prijaviti grešku u podacima?',
-            answer:
-                'Greške možete prijaviti putem kontakt forme u odjeljku Profil, '
-                'ili direktno na našu e-mail adresu podrške.',
-          ),
-        ],
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _items.isEmpty
+              ? const Center(child: Text('Trenutno nema dostupnih pitanja.'))
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: _items
+                      .map((item) => _FaqItem(
+                            question: item.question,
+                            answer: item.answer,
+                          ))
+                      .toList(),
+                ),
     );
   }
 }

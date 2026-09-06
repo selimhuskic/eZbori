@@ -33,10 +33,10 @@ public static class SqlConfiguration
         services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<IServiceRepository, ServiceRepository>();
         services.AddScoped<IAnalysisRepository, AnalysisRepository>();
-        services.AddScoped<IForecastedResultRepository, ForecastedResultRepository>();
         services.AddScoped<ISavedSearchRepository, SavedSearchRepository>();
         services.AddScoped<IElectionCycleRepository, ElectionCycleRepository>();
         services.AddScoped<IImportJobRepository, ImportJobRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IFaqRepository, FaqRepository>();
     }
 }

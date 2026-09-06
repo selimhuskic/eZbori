@@ -39,10 +39,10 @@ public class eZboriDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
-        modelBuilder.ApplyConfiguration(new ForecastedResultConfiguration());
         modelBuilder.ApplyConfiguration(new SavedSearchConfiguration());
         modelBuilder.ApplyConfiguration(new ElectionCycleConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationConfiguration());
+        modelBuilder.ApplyConfiguration(new FaqItemConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
@@ -75,9 +75,9 @@ public class eZboriDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<ForecastedResult> ForecastedResults { get; set; }
     public DbSet<SavedSearch> SavedSearches { get; set; }
     public DbSet<ElectionCycle> ElectionCycles { get; set; }
     public DbSet<ImportJob> ImportJobs { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<FaqItem> FaqItems { get; set; }
 }
